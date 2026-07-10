@@ -77,6 +77,24 @@ so testers get **fresh questions on replay**. A full playthrough is **46 questio
 - **Results screen** redesigned: hero summary (emoji + headline + final bank), 3 stat tiles
   (Correct / Accuracy / Best), and a card list grouped by round (no more overflowing table).
 
+### Design polish pass (demo-readiness, 2026-07-10)
+Professional "cozy casual game" pass targeting the core demographic (warm, reverent, early-Candy-Crush
+gloss). All CSS/emoji/inline-SVG — still a single offline file:
+- **Palette**: deep-plum "chapel at dusk" background (was pure black), plum-tinted cards, creamy
+  honey gold, rose & Marian-blue accents, warm white text.
+- **Candy-gloss components**: glossy pill buttons (shine + pressed state), soft-lit cards/stat tiles,
+  blush hover on answers, candy-pad match-3 tiles with per-tile gloss (blue-tinted on the Mary board).
+- **Ambient delight**: drifting warm glow + candlelight specks behind the home hero, soft screen
+  vignette, celebratory shine sweep on results (reduced-motion respected; question screen untouched).
+- **Demo-readiness fixes from review** (multi-agent audit): home rules now match actual scoring
+  (wrong-before-$0 = no penalty); difficulty-gag quips acknowledge the player's pick; SNEEZE_CHANCE
+  0.5 → **0.12** + softer sound + halo-face saint; **"Skip this break →"** escape hatch on all three
+  mini-games (awards $50, never stuck); $0 flicker slowed from ~7Hz strobe to a gentle 1.2s breathe
+  (photosensitivity); softened Manna/coffee copy; "Bring it on" → "Onward!"; Enter restarts from
+  results; manifest screenshot now portrait 1080×1920.
+- Known/accepted: match-3 clears ✝️/🕊️ symbols (user's chosen symbol set — flagged for a
+  target-audience gut-check); intro.mp4 (3 MB) is precached by the SW.
+
 ### Recent fixes
 - **Round 3 wheel bug FIXED:** spin button had a duplicate `addEventListener` + `onclick` that
   double-fired (phantom spins, double awards, broke Round 3). Now uses `onclick` only, reset on each open.

@@ -17,6 +17,6 @@
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ],
   "screenshots": [
-    { "src": "screenshot-1.png", "sizes": "1080x1080", "type": "image/png", "form_factor": "narrow", "label": "Catholics.app Trivia — beat the clock, bank your faith" }
+    { "src": "screenshot-1.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Catholics.app Trivia — beat the clock, bank your faith" }
   ]
 }
