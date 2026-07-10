@@ -1,0 +1,2420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Catholics.app Trivia</title>
+<!-- PWA: installable / PWABuilder-ready (service worker needs http(s), not file://) -->
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#FFCE45" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Catholics.app" />
+<style>
+  :root {
+    /* iOS-27 dark system palette */
+    --ios-bg:        #000000;
+    --ios-elevated:  #1c1c1e;
+    --ios-elevated2: #2c2c2e;
+    --ios-separator: rgba(84,84,88,0.55);
+    --label:         #ffffff;
+    --label-2:       rgba(235,235,245,0.60);
+    --label-3:       rgba(235,235,245,0.30);
+    --gold:          #FFCE45;
+    --gold-2:        #F5B301;
+    --red:           #FF453A;
+    --green:         #30D158;
+    --blue:          #0A84FF;
+    --pink:          #FF6B81;
+    --fontRound: ui-rounded, "SF Pro Rounded", "SF Pro Display", system-ui, -apple-system, sans-serif;
+    --fontText:  system-ui, -apple-system, "SF Pro Text", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: radial-gradient(1200px 800px at 50% 0%, #17131f, #050507 60%);
+    font-family: var(--fontText);
+    color: var(--label);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  /* ---------- iPhone device frame ---------- */
+  .phone {
+    position: relative;
+    width: 100%;
+    max-width: 402px;
+    height: min(94vh, 872px);
+    background: linear-gradient(160deg,#3a3a3c,#0a0a0a);
+    border-radius: 56px;
+    padding: 11px;
+    box-shadow:
+      0 50px 120px rgba(0,0,0,0.75),
+      0 0 0 2px #000 inset,
+      0 1px 2px rgba(255,255,255,0.35);
+  }
+  .screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: var(--ios-bg);
+    border-radius: 46px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Dynamic Island */
+  .island {
+    position: absolute;
+    top: 11px; left: 50%;
+    transform: translateX(-50%);
+    width: 118px; height: 34px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 50;
+  }
+  /* Status bar */
+  .statusbar {
+    height: 54px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 26px 6px;
+    font-family: var(--fontText);
+    font-weight: 600;
+    font-size: 15px;
+    z-index: 40;
+  }
+  .statusbar .time { letter-spacing: 0.3px; }
+  .statusbar .icons { display: flex; align-items: center; gap: 6px; }
+  .statusbar svg { display: block; }
+
+  /* content area */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    padding: 4px 20px 26px;
+  }
+  .hidden { display: none !important; }
+
+  /* ---------- shared iOS bits ---------- */
+  .large-title {
+    font-family: var(--fontRound);
+    font-weight: 800;
+    font-size: 34px;
+    letter-spacing: 0.2px;
+    line-height: 1.05;
+  }
+  .card {
+    background: var(--ios-elevated);
+    border-radius: 20px;
+    padding: 18px;
+  }
+  .btn {
+    width: 100%;
+    border: none;
+    border-radius: 16px;
+    padding: 16px;
+    font-family: var(--fontText);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    color: #1a1400;
+    background: linear-gradient(180deg, var(--gold), var(--gold-2));
+    box-shadow: 0 8px 24px rgba(245,179,1,0.30);
+    transition: transform 0.08s ease, filter 0.12s;
+  }
+  .btn:active { transform: scale(0.975); filter: brightness(0.95); }
+  .btn.secondary {
+    color: var(--label);
+    background: var(--ios-elevated2);
+    box-shadow: none;
+  }
+
+  .money { font-family: var(--fontRound); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Bank pill (top of content) ---------- */
+  .bankbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 2px 0 10px;
+  }
+  .bankbar .brand { font-size: 13px; font-weight: 700; color: var(--label-2); letter-spacing: 0.2px; }
+  .bankbar .brand b { color: var(--gold); }
+  .bank-pill {
+    position: relative;
+    background: var(--ios-elevated);
+    border-radius: 999px;
+    padding: 7px 15px 7px 13px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .bank-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+  .bank-pill .amt { font-family: var(--fontRound); font-weight: 800; font-size: 17px; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .bank-pill.neg .amt { color: var(--red); }
+  .bank-pill.neg .dot { background: var(--red); box-shadow: 0 0 10px var(--red); }
+  .float-delta {
+    position: absolute; right: 12px; top: 4px;
+    font-family: var(--fontRound); font-weight: 800; font-size: 18px;
+    pointer-events: none; opacity: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .float-delta.pos { color: var(--green); }
+  .float-delta.neg { color: var(--red); }
+  .float-delta.run { animation: floatUp 1.5s ease-out forwards; }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translateY(4px); }
+    15% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-46px); }
+  }
+
+  /* ---------- HOME ---------- */
+  .home { flex: 1; display: flex; flex-direction: column; }
+  .home .hero { text-align: center; margin-top: 26px; }
+  .home .crest { font-size: 54px; line-height: 1; }
+  .home .title {
+    font-family: var(--fontRound);
+    font-weight: 800; font-size: 40px; margin-top: 10px; letter-spacing: -0.5px;
+  }
+  .home .title .app { color: var(--gold); }
+  .home .subtitle { font-size: 19px; font-weight: 600; color: var(--label-2); margin-top: 2px; }
+  .home .tagline { font-size: 15px; color: var(--label-3); margin-top: 10px; }
+  .home .rules { margin-top: 26px; }
+  .rules-row { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; }
+  .rules-row + .rules-row { border-top: 1px solid var(--ios-separator); }
+  .rules-row .ic { font-size: 20px; width: 26px; text-align: center; flex-shrink: 0; }
+  .rules-row .tx { font-size: 14px; color: var(--label-2); line-height: 1.4; }
+  .rules-row .tx b { color: var(--label); }
+  .home .cta { margin-top: auto; padding-top: 22px; }
+
+  /* ---------- PRE-ROLL ---------- */
+  .preroll { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .preroll .qn { color: var(--label-2); font-size: 15px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 22px; }
+  .preroll .cat { font-size: 20px; font-weight: 700; color: var(--gold); margin-bottom: 30px; }
+  .preroll .count {
+    font-family: var(--fontRound); font-weight: 900; font-size: 150px; line-height: 1;
+    color: var(--label); animation: pop 0.5s ease-out;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.35); opacity: 0; }
+    55% { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+
+  /* ---------- PLAY ---------- */
+  .play { flex: 1; display: flex; flex-direction: column; }
+  .play-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .chip {
+    background: rgba(255,206,69,0.14); color: var(--gold);
+    border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 700;
+  }
+  .qprog { font-size: 13px; font-weight: 700; color: var(--label-3); letter-spacing: 0.5px; }
+
+  .meter { text-align: center; margin: 8px 0 16px; }
+  .meter .val {
+    font-family: var(--fontRound); font-weight: 900; font-size: 68px; line-height: 1;
+    color: var(--gold); font-variant-numeric: tabular-nums;
+    transition: color 0.15s;
+  }
+  .meter .val.low { color: var(--red); }
+  .meter .val.frozen { text-shadow: 0 0 30px currentColor; }
+  .meter .val.flicker { animation: flick 0.14s steps(2,end) infinite; }
+  @keyframes flick { 0%,100% { opacity: 1; } 50% { opacity: 0.18; } }
+
+  .bar-track { margin: 14px auto 0; height: 7px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .bar-fill { height: 100%; width: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--gold-2), var(--gold)); transition: width 0.1s linear; }
+  .bar-fill.low { background: var(--red); }
+
+  .qbody {
+    font-size: 23px; font-weight: 700; line-height: 1.32; text-align: center;
+    margin: 10px 4px 20px; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center; min-height: 92px;
+  }
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .opt {
+    background: var(--ios-elevated); border: 1.5px solid transparent;
+    border-radius: 16px; padding: 15px 14px; font-size: 15.5px; font-weight: 600;
+    color: var(--label); text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 11px; min-height: 62px;
+    transition: transform 0.06s, background 0.12s, border-color 0.12s;
+  }
+  .opt:active:not(:disabled) { transform: scale(0.98); }
+  .opt:disabled { cursor: default; }
+  .opt .key {
+    width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0;
+    background: var(--ios-elevated2); color: var(--label-2);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--fontRound); font-size: 12px; font-weight: 800;
+  }
+  .opt.correct { background: rgba(48,209,88,0.20); border-color: var(--green); }
+  .opt.correct .key { background: var(--green); color: #05230f; }
+  .opt.wrong { background: rgba(255,69,58,0.20); border-color: var(--red); }
+  .opt.wrong .key { background: var(--red); color: #2a0206; }
+  .opt.dim { opacity: 0.4; }
+
+  .reveal { text-align: center; min-height: 56px; margin-top: 16px; }
+  .reveal .delta { font-family: var(--fontRound); font-weight: 900; font-size: 32px; font-variant-numeric: tabular-nums; }
+  .reveal .delta.pos { color: var(--green); }
+  .reveal .delta.neg { color: var(--red); }
+  .reveal .delta.safe { color: var(--label-2); }
+  .reveal .cite { color: var(--label-3); font-size: 12.5px; margin-top: 4px; }
+
+  .flashG { animation: fg 0.6s ease-out; }
+  .flashR { animation: fr 0.6s ease-out; }
+  @keyframes fg { 0% { box-shadow: inset 0 0 0 3px var(--green); } 100% { box-shadow: none; } }
+  @keyframes fr { 0% { box-shadow: inset 0 0 0 3px var(--red); } 100% { box-shadow: none; } }
+
+  /* ---------- BONUS WHEEL ---------- */
+  .bonus { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .bonus .kicker { color: var(--gold); font-weight: 800; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-top: 10px; }
+  .bonus h2 { font-family: var(--fontRound); font-weight: 800; font-size: 27px; margin-top: 4px; text-align: center; }
+  .bonus .blurb { color: var(--label-2); font-size: 14px; text-align: center; margin: 6px 20px 8px; line-height: 1.4; }
+  .wheel-wrap { position: relative; width: 300px; max-width: 82%; margin: 10px auto 6px; aspect-ratio: 1; }
+  .wheel-wrap .pointer {
+    position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; z-index: 6;
+    border-left: 15px solid transparent; border-right: 15px solid transparent;
+    border-top: 24px solid var(--gold);
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.5));
+  }
+  .wheel-wrap .hub {
+    position: absolute; top: 50%; left: 50%; width: 54px; height: 54px;
+    transform: translate(-50%,-50%); border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #fff, #d9d9d9);
+    z-index: 5; box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+  }
+  #wheelSVG { width: 100%; height: 100%; display: block; filter: drop-shadow(0 12px 30px rgba(0,0,0,0.5)); }
+  #wheelSpin { transform-box: fill-box; transform-origin: center; transition: transform 4.3s cubic-bezier(0.16,0.75,0.14,1); }
+  .bonus .result { min-height: 40px; text-align: center; margin-top: 4px; }
+  .bonus .result .r-amt { font-family: var(--fontRound); font-weight: 900; font-size: 30px; }
+  .bonus .result .r-amt.jackpot { color: var(--gold); }
+  .bonus .result .r-amt.norm { color: var(--green); }
+  .bonus .result .r-sub { color: var(--label-2); font-size: 13px; margin-top: 2px; }
+  .bonus .cta { width: 100%; margin-top: auto; padding-top: 14px; }
+  @keyframes jackpotPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  .r-amt.jackpot { animation: jackpotPulse 0.6s ease-in-out 3; }
+
+  /* ---------- ROUND INTRO ---------- */
+  .roundintro { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .ri-badge {
+    width: 96px; height: 96px; border-radius: 28px; font-size: 48px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, rgba(255,206,69,0.18), rgba(255,206,69,0.06));
+    border: 1px solid rgba(255,206,69,0.3); margin-bottom: 22px;
+    animation: pop 0.5s ease-out;
+  }
+  .ri-num { color: var(--gold); font-weight: 800; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
+  .ri-name { font-family: var(--fontRound); font-weight: 800; font-size: 30px; margin-top: 6px; }
+  .ri-sub { color: var(--label-2); font-size: 16px; margin-top: 4px; }
+  .ri-meta { color: var(--label-3); font-size: 13px; margin-top: 14px; }
+  .roundintro .cta { width: 100%; margin-top: 34px; }
+
+  /* ---------- NEXT ROUND / DIFFICULTY ---------- */
+  .nextround { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .nextround h2 { font-family: var(--fontRound); font-weight: 800; font-size: 30px; margin-top: 4px; }
+  .nr-bank { color: var(--label-2); font-size: 15px; margin-top: 8px; }
+  .nr-bank b { color: var(--gold); font-family: var(--fontRound); }
+  .nr-q { color: var(--label); font-size: 17px; font-weight: 600; margin: 30px 0 16px; }
+  .nr-choices { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+  .nr-choice {
+    display: flex; align-items: center; gap: 14px; width: 100%;
+    background: var(--ios-elevated); border: 1.5px solid transparent; border-radius: 18px;
+    padding: 18px 20px; cursor: pointer; color: var(--label);
+    font-size: 18px; font-weight: 700; transition: transform 0.06s, border-color 0.12s, background 0.12s;
+  }
+  .nr-choice:active { transform: scale(0.98); }
+  .nr-choice.picked { border-color: var(--gold); background: rgba(255,206,69,0.10); }
+  .nr-choice .nr-emoji { font-size: 26px; }
+  .nr-quip { min-height: 44px; margin-top: 22px; color: var(--gold); font-weight: 700; font-size: 16px; opacity: 0; transition: opacity 0.3s; }
+  .nr-quip.show { opacity: 1; }
+
+  /* ---------- MANNA REACTION GAME ---------- */
+  .manna { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .manna .kicker { color: var(--gold); font-weight: 800; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-top: 8px; }
+  .manna h2 { font-family: var(--fontRound); font-weight: 800; font-size: 27px; margin-top: 4px; }
+  .manna .blurb { color: var(--label-2); font-size: 13.5px; text-align: center; margin: 6px 6px 10px; line-height: 1.4; }
+  .manna .blurb b { color: var(--label); }
+  .manna-hud { display: flex; gap: 10px; width: 100%; margin-bottom: 10px; }
+  .hud-item { flex: 1; background: var(--ios-elevated); border-radius: 14px; padding: 9px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .hud-k { font-size: 10.5px; color: var(--label-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .hud-v { font-family: var(--fontRound); font-weight: 800; font-size: 19px; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .manna-field {
+    position: relative; width: 100%; flex: 1; min-height: 300px; overflow: hidden;
+    border-radius: 20px; background: linear-gradient(180deg, #101d33 0%, #0a1526 60%, #0b1a12 100%);
+    box-shadow: inset 0 2px 20px rgba(0,0,0,0.4);
+  }
+  .manna {
+    /* NOTE: overridden below for flakes via .flake */
+  }
+  .flake {
+    position: absolute; top: -46px; width: 42px; height: 42px; margin-left: -21px;
+    display: flex; align-items: center; justify-content: center; font-size: 30px;
+    cursor: pointer; user-select: none; will-change: transform;
+    filter: drop-shadow(0 0 6px rgba(255,236,170,0.8));
+    animation-name: fall; animation-timing-function: linear; animation-fill-mode: forwards;
+  }
+  @keyframes fall { from { transform: translateY(0); } to { transform: translateY(360px); } }
+  .flake.pop { animation: none; }
+  .manna-basket {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 3; pointer-events: none;
+  }
+  .basket-emoji { font-size: 40px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+  .basket-bar { width: 120px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.15); overflow: hidden; }
+  .basket-bar > div { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--gold-2), var(--gold)); transition: width 0.2s; }
+  .manna .result { min-height: 38px; text-align: center; margin-top: 8px; }
+  .manna .result .r-amt { font-family: var(--fontRound); font-weight: 900; font-size: 28px; color: var(--green); }
+  .manna .result .r-amt.fast { color: var(--gold); }
+  .manna .result .r-sub { color: var(--label-2); font-size: 13px; margin-top: 2px; }
+  .manna .cta { width: 100%; margin-top: 12px; }
+
+  /* ---------- MATCH-3 (Gifts from Heaven) ---------- */
+  .match3 { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .match3 .kicker { color: var(--gold); font-weight: 800; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-top: 8px; }
+  .match3 h2 { font-family: var(--fontRound); font-weight: 800; font-size: 27px; margin-top: 4px; }
+  .match3 .blurb { color: var(--label-2); font-size: 13.5px; text-align: center; margin: 6px 6px 10px; line-height: 1.4; }
+  .match3 .blurb b { color: var(--label); }
+  .match3-field {
+    position: relative; width: 100%; flex: 1; min-height: 300px; overflow: hidden;
+    border-radius: 20px; background: linear-gradient(180deg, #101d33 0%, #0a1526 60%, #120c1f 100%);
+    box-shadow: inset 0 2px 20px rgba(0,0,0,0.4); touch-action: manipulation;
+  }
+  .m3tile {
+    position: absolute; top: 0; left: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none; will-change: transform;
+    filter: drop-shadow(0 0 6px rgba(255,236,170,0.55));
+    transform: var(--pos, translate(0,0));
+    transition: transform 0.2s cubic-bezier(0.3,0.7,0.2,1), opacity 0.18s, filter 0.15s;
+  }
+  .m3tile.sel {
+    filter: drop-shadow(0 0 10px var(--gold));
+    z-index: 4;
+  }
+  .m3tile.sel::after {
+    content: ''; position: absolute; inset: 4%;
+    border: 2.5px solid var(--gold); border-radius: 12px;
+    box-shadow: 0 0 12px rgba(255,206,69,0.6);
+  }
+  .m3tile.clearing { animation: m3pop 0.18s ease-in forwards; pointer-events: none; }
+  @keyframes m3pop { 0% { transform: var(--pos) scale(1); opacity: 1; } 100% { transform: var(--pos) scale(0.1); opacity: 0; } }
+  .match3 .result { min-height: 38px; text-align: center; margin-top: 8px; }
+  .match3 .result .r-amt { font-family: var(--fontRound); font-weight: 900; font-size: 28px; color: var(--green); }
+  .match3 .result .r-amt.fast { color: var(--gold); }
+  .match3 .result .r-sub { color: var(--label-2); font-size: 13px; margin-top: 2px; }
+  .match3 .cta { width: 100%; margin-top: 12px; }
+
+  /* Mother Mary variant — traditional Marian blue/gold, gentle glow */
+  .mary-field { background: linear-gradient(180deg, #16214a 0%, #101a3d 55%, #1a1330 100%); }
+  .mary-banner {
+    position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(70% 60% at 50% 42%, rgba(60,80,170,0.6), rgba(8,12,32,0.9));
+    opacity: 0; pointer-events: none; transition: opacity 0.35s;
+  }
+  .mary-banner.show { opacity: 1; }
+  .mary-banner .mb-icon { font-size: 62px; filter: drop-shadow(0 0 16px rgba(160,190,255,0.7)); animation: pop 0.5s ease-out; }
+  .mary-banner .mb-tier { color: var(--gold); font-weight: 800; font-size: 12.5px; letter-spacing: 2px; text-transform: uppercase; margin-top: 10px; }
+  .mary-banner .mb-name { font-family: var(--fontRound); font-weight: 800; font-size: 24px; margin-top: 2px; color: #eaf0ff; }
+  .mary-banner .mb-goal { color: #b9c6ff; font-size: 13px; margin-top: 6px; }
+
+  /* ---------- SAINTLY SNEEZE (easter egg overlay) ---------- */
+  .sneeze { position: absolute; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .sneeze.hidden { display: none; }
+  .sneeze-dim {
+    position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s;
+    background: radial-gradient(62% 50% at 50% 42%, rgba(255,206,69,0.24), rgba(0,0,0,0.60) 76%);
+  }
+  .sneeze.show .sneeze-dim { opacity: 1; }
+  .sneeze-stage { position: relative; text-align: center; }
+  .sneeze-saint { font-size: 112px; line-height: 1; transform: scale(1); filter: drop-shadow(0 8px 22px rgba(0,0,0,0.5)); }
+  .sneeze.show .sneeze-saint { animation: saintIn 0.5s cubic-bezier(0.2,1.4,0.4,1); }
+  .sneeze.achoo .sneeze-saint { animation: achooShake 0.55s ease-out; }
+  @keyframes saintIn { 0% { transform: scale(0) rotate(-10deg); } 70% { transform: scale(1.14) rotate(4deg); } 100% { transform: scale(1) rotate(0); } }
+  @keyframes achooShake {
+    0% { transform: translateY(-12px) rotate(-5deg) scale(1.06); }
+    22% { transform: translateY(8px) rotate(4deg) scale(0.94); }
+    45% { transform: translateY(-3px) rotate(-3deg) scale(1.03); }
+    70% { transform: translateY(2px) rotate(2deg) scale(0.99); }
+    100% { transform: translateY(0) rotate(0) scale(1); }
+  }
+  .sneeze-halo { position: absolute; left: 50%; top: 6%; transform: translateX(-50%); font-size: 40px; opacity: 0.9; }
+  .sneeze-puff {
+    position: absolute; left: 50%; top: 40%; transform: translate(-50%,-50%) scale(0.2);
+    font-size: 92px; opacity: 0; filter: drop-shadow(0 0 20px rgba(255,206,69,0.85));
+  }
+  .sneeze.achoo .sneeze-puff { animation: puff 0.85s ease-out forwards; }
+  @keyframes puff { 0% { transform: translate(-50%,-50%) scale(0.2); opacity: 0; } 18% { opacity: 0.95; } 100% { transform: translate(-50%,-150%) scale(2.5); opacity: 0; } }
+  .sneeze-sparkles { position: absolute; left: 50%; top: 32%; width: 0; height: 0; }
+  .spark { position: absolute; font-size: 22px; opacity: 0; transform: translate(-50%,-50%); will-change: transform, opacity; }
+  .sneeze.achoo .spark { animation: sparkFly 0.9s ease-out forwards; }
+  @keyframes sparkFly {
+    0% { opacity: 0; transform: translate(-50%,-50%) scale(0.3) rotate(0); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.15) rotate(var(--rot)); }
+  }
+  .sneeze-text { font-family: var(--fontRound); font-weight: 900; font-size: 36px; color: var(--gold); text-shadow: 0 2px 14px rgba(255,206,69,0.6); opacity: 0; margin-top: 14px; }
+  .sneeze.achoo .sneeze-text { animation: blessUp 1.7s ease-out 0.12s forwards; }
+  @keyframes blessUp { 0% { opacity: 0; transform: translateY(16px) scale(0.8); } 18% { opacity: 1; transform: translateY(0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-34px); } }
+  .sneeze-sub { color: var(--label); font-size: 14px; margin-top: 8px; opacity: 0; }
+  .sneeze-sub .sneeze-amt { color: var(--green); font-weight: 800; }
+  .sneeze.achoo .sneeze-sub { animation: subFade 1.9s ease-out 0.35s forwards; }
+  @keyframes subFade { 0% { opacity: 0; } 25% { opacity: 1; } 84% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* ---------- HOLY COFFEE (easter egg overlay) ---------- */
+  .holycoffee { position: absolute; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .holycoffee.hidden { display: none; }
+  .hc-dim {
+    position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s;
+    background: radial-gradient(62% 50% at 50% 46%, rgba(255,206,69,0.22), rgba(30,18,5,0.62) 78%);
+  }
+  .holycoffee.show .hc-dim { opacity: 1; }
+  .hc-stage { position: relative; text-align: center; }
+  .hc-mug { position: relative; font-size: 108px; line-height: 1; display: inline-block; transform: scale(1); filter: drop-shadow(0 10px 22px rgba(0,0,0,0.5)); }
+  .holycoffee.show .hc-mug { animation: mugIn 0.55s cubic-bezier(0.2,1.4,0.4,1), mugBob 2.4s ease-in-out 0.55s; }
+  @keyframes mugIn { 0% { transform: scale(0) rotate(-8deg); } 70% { transform: scale(1.12) rotate(3deg); } 100% { transform: scale(1) rotate(0); } }
+  @keyframes mugBob { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-6px) rotate(-2deg); } }
+  .hc-cross { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); font-size: 26px; filter: drop-shadow(0 0 10px var(--gold)); animation: crossGlow 1.4s ease-in-out infinite; }
+  @keyframes crossGlow { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+  .hc-steam { position: absolute; left: 50%; top: 20%; width: 0; height: 0; }
+  .hc-puff { position: absolute; font-size: 26px; opacity: 0; transform: translate(-50%,-50%); }
+  .holycoffee.show .hc-puff { animation: steamUp 1.8s ease-out infinite; }
+  @keyframes steamUp { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.6); } 25% { opacity: 0.7; } 100% { opacity: 0; transform: translate(calc(-50% + var(--sx)), -160px) scale(1.3); } }
+  .hc-overflow { position: absolute; left: 50%; top: 44%; width: 0; height: 0; }
+  .drip { position: absolute; font-size: 20px; opacity: 0; transform: translate(-50%,-50%); will-change: transform, opacity; }
+  .holycoffee.show .drip { animation: dripDown 1.3s ease-in forwards; }
+  @keyframes dripDown { 0% { opacity: 0; transform: translate(calc(-50% + var(--dx)),-50%) scale(0.4); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), 90px) scale(1); } }
+  .hc-wink { position: absolute; right: -6px; top: -14px; font-size: 46px; opacity: 0; }
+  .holycoffee.show .hc-wink { animation: winkIn 2.2s ease-out 0.5s; }
+  @keyframes winkIn { 0% { opacity: 0; transform: scale(0.4) rotate(-12deg); } 14% { opacity: 1; transform: scale(1.1) rotate(6deg); } 24% { transform: scale(1) rotate(0); } 82% { opacity: 1; } 100% { opacity: 0; } }
+  .hc-quip { color: var(--label); font-size: 15px; font-style: italic; margin-top: 12px; opacity: 0; }
+  .holycoffee.show .hc-quip { animation: subFade 2.1s ease-out 0.7s; }
+  .hc-text { font-family: var(--fontRound); font-weight: 900; font-size: 34px; color: var(--gold); text-shadow: 0 2px 14px rgba(255,206,69,0.55); opacity: 0; margin-top: 10px; }
+  .holycoffee.show .hc-text { animation: blessUp 2.0s ease-out 0.4s; }
+  .hc-sub { color: var(--label); font-size: 13.5px; margin-top: 8px; opacity: 0; line-height: 1.4; padding: 0 24px; }
+  .hc-sub .hc-amt { color: var(--green); font-weight: 800; }
+  .holycoffee.show .hc-sub { animation: subFade 2.2s ease-out 0.6s; }
+
+  /* ---------- SLEEPING ANGEL (time-out gag) ---------- */
+  .angel { position: absolute; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .angel.hidden { display: none; }
+  .angel-dim {
+    position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s;
+    background: radial-gradient(60% 50% at 50% 44%, rgba(120,160,255,0.20), rgba(0,0,0,0.62) 78%);
+  }
+  .angel.show .angel-dim { opacity: 1; }
+  .angel-stage { position: relative; text-align: center; }
+  .angel-scene { position: relative; display: inline-flex; align-items: flex-end; gap: 4px; padding: 0 8px; }
+  .angel-cloud { font-size: 96px; filter: drop-shadow(0 8px 18px rgba(0,0,0,0.45)); }
+  .angel-fig { position: absolute; left: 34px; top: -4px; font-size: 66px; transform-origin: 50% 90%; }
+  .angel.show .angel-fig { animation: doze 2s ease-in-out infinite; }
+  .angel.show.wake .angel-fig { animation: wakeJolt 0.6s cubic-bezier(0.2,1.5,0.3,1); }
+  @keyframes doze { 0%,100% { transform: rotate(-9deg) translateY(0); } 50% { transform: rotate(-15deg) translateY(4px); } }
+  @keyframes wakeJolt { 0% { transform: rotate(-15deg) translateY(4px) scale(1); } 30% { transform: rotate(7deg) translateY(-12px) scale(1.16); } 60% { transform: rotate(-3deg) translateY(0) scale(1.03); } 100% { transform: rotate(0) translateY(0) scale(1); } }
+  .angel-glass { font-size: 52px; transform-origin: 50% 50%; }
+  .angel.show.wake .angel-glass { animation: glassShake 0.5s ease-in-out 2; }
+  @keyframes glassShake { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-18deg); } 75% { transform: rotate(18deg); } }
+  .angel-zzz { position: absolute; left: 58px; top: -2px; font-size: 30px; opacity: 0; }
+  .angel.show:not(.wake) .angel-zzz { animation: zzzFloat 2s ease-in-out infinite; }
+  @keyframes zzzFloat { 0% { opacity: 0; transform: translate(-8px,6px) scale(0.7); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(22px,-36px) scale(1.1); } }
+  .angel-text { font-family: var(--fontRound); font-weight: 900; font-size: 24px; color: #cdd8ff; margin-top: 18px; opacity: 0; }
+  .angel.show .angel-text { animation: subFade 3.2s ease-out 0.2s; }
+  .angel-sub { color: var(--label); font-size: 14px; margin-top: 6px; opacity: 0; }
+  .angel.show.wake .angel-sub { animation: subFade 1.8s ease-out; }
+
+  /* ---------- RESULTS ---------- */
+  .res-round-title { font-family: var(--fontRound); font-weight: 800; font-size: 15px; color: var(--gold); margin: 18px 2px 8px; display: flex; align-items: center; gap: 8px; }
+  .res-round-title .rt-ic { font-size: 17px; }
+  .results { flex: 1; display: flex; flex-direction: column; }
+  .res-hero {
+    text-align: center; padding: 16px 0 20px; margin-bottom: 8px;
+    background: radial-gradient(120% 90% at 50% 0%, rgba(255,206,69,0.10), transparent 70%);
+  }
+  .res-hero.neg { background: radial-gradient(120% 90% at 50% 0%, rgba(255,69,58,0.12), transparent 70%); }
+  .res-emoji { font-size: 42px; line-height: 1; }
+  .res-hero .lbl { color: var(--label-2); font-size: 13px; font-weight: 600; letter-spacing: 0.4px; margin-top: 8px; }
+  .res-hero .final { font-family: var(--fontRound); font-weight: 900; font-size: 56px; line-height: 1.02; color: var(--gold); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .res-hero .final.neg { color: var(--red); }
+  .res-hero .headline { font-family: var(--fontRound); font-weight: 800; font-size: 20px; margin-top: 6px; }
+
+  .res-stats { display: flex; gap: 8px; justify-content: center; margin-top: 16px; padding: 0 4px; }
+  .stat {
+    flex: 1; background: var(--ios-elevated); border-radius: 14px; padding: 10px 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .stat .v { font-family: var(--fontRound); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .stat .v.pos { color: var(--green); } .stat .v.neg { color: var(--red); } .stat .v.gold { color: var(--gold); }
+  .stat .k { font-size: 10.5px; color: var(--label-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+
+  .res-section-title { font-size: 13px; font-weight: 700; color: var(--label-3); text-transform: uppercase; letter-spacing: 0.6px; margin: 20px 2px 10px; }
+  .res-list { display: flex; flex-direction: column; gap: 8px; }
+  .res-row {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--ios-elevated); border-radius: 16px; padding: 13px 14px;
+  }
+  .res-row.bonus { background: linear-gradient(180deg, rgba(255,206,69,0.14), rgba(255,206,69,0.05)); border: 1px solid rgba(255,206,69,0.25); }
+  .res-badge {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--fontRound); font-weight: 800; font-size: 14px; color: #fff;
+  }
+  .res-badge.ok { background: var(--green); color: #05230f; }
+  .res-badge.bad { background: var(--red); color: #2a0206; }
+  .res-badge.star { background: linear-gradient(180deg, var(--gold), var(--gold-2)); color: #1a1400; font-size: 15px; }
+  .res-main { flex: 1; min-width: 0; }
+  .res-qhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .res-cat { font-size: 11px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 0.3px; }
+  .res-delta { font-family: var(--fontRound); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .res-delta.pos { color: var(--green); } .res-delta.neg { color: var(--red); }
+  .res-q {
+    font-size: 14.5px; font-weight: 600; line-height: 1.32; margin: 4px 0 8px; color: var(--label);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .res-ans { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: 12.5px; }
+  .res-tag { color: var(--label-3); font-weight: 600; }
+  .res-you { font-weight: 700; }
+  .res-you.ok { color: var(--green); }
+  .res-you.bad { color: var(--red); text-decoration: line-through; text-decoration-color: rgba(255,69,58,0.5); }
+  .res-correct { color: var(--label); font-weight: 700; }
+  .res-time { margin-left: auto; color: var(--label-3); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .res-bonus-line { font-size: 12.5px; color: var(--label-2); font-weight: 600; }
+  .results .cta { margin-top: 20px; }
+
+  /* ---------- SPLASH / INTRO ---------- */
+  .splash {
+    position: absolute; inset: 0; z-index: 200; background: #000;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    opacity: 1; transition: opacity 0.5s ease;
+  }
+  .splash.fade { opacity: 0; }
+  .splash.gone { display: none; }
+  .splash-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .splash-skip {
+    position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+    font-family: var(--fontText); font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
+    color: rgba(255,255,255,0.72); background: rgba(0,0,0,0.35);
+    padding: 7px 15px; border-radius: 999px; backdrop-filter: blur(6px);
+    opacity: 0; animation: skipIn 0.4s ease 1s forwards;
+  }
+  @keyframes skipIn { to { opacity: 1; } }
+
+  @media (max-width: 430px) {
+    body { padding: 0; }
+    .phone { max-width: 100%; height: 100vh; border-radius: 0; padding: 0; box-shadow: none; }
+    .screen { border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="island"></div>
+  <div class="screen">
+    <!-- status bar -->
+    <div class="statusbar">
+      <div class="time">9:41</div>
+      <div class="icons">
+        <!-- cellular -->
+        <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#fff">
+          <rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/>
+          <rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0.5" width="3" height="11.5" rx="1"/>
+        </g></svg>
+        <!-- wifi -->
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="#fff"><path d="M8.5 2.2c2.6 0 5 1 6.8 2.6l1.4-1.5A11.4 11.4 0 0 0 8.5 0 11.4 11.4 0 0 0 .3 3.3l1.4 1.5A9.4 9.4 0 0 1 8.5 2.2Zm0 3.6c1.6 0 3.1.6 4.2 1.6l1.4-1.5a8 8 0 0 0-11.2 0l1.4 1.5A6 6 0 0 1 8.5 5.8Zm0 3.6c.7 0 1.3.3 1.8.7l-1.8 2-1.8-2c.5-.4 1.1-.7 1.8-.7Z"/></svg>
+        <!-- battery -->
+        <svg width="27" height="13" viewBox="0 0 27 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3.5" fill="none" stroke="rgba(255,255,255,0.45)"/><rect x="2" y="2" width="17" height="9" rx="2" fill="#fff"/><rect x="24" y="4" width="2" height="5" rx="1" fill="rgba(255,255,255,0.45)"/></svg>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- persistent bank bar (hidden on home) -->
+      <div id="bankbar" class="bankbar hidden">
+        <div class="brand">✝ <b>Catholics.app</b> Trivia</div>
+        <div id="bankPill" class="bank-pill">
+          <span class="dot"></span>
+          <span class="amt money" id="bankVal">$0</span>
+          <span id="floatDelta" class="float-delta"></span>
+        </div>
+      </div>
+
+      <!-- HOME -->
+      <div id="screenHome" class="home">
+        <div class="hero">
+          <div class="crest">✝</div>
+          <div class="title"><span class="app">Catholics.app</span></div>
+          <div class="subtitle">Trivia</div>
+          <div class="tagline">Beat the clock. Bank your faith.</div>
+        </div>
+        <div class="card rules">
+          <div class="rules-row"><div class="ic">⏱️</div><div class="tx">Every question starts at <b>$1,000</b> and drains <b>$100 a second</b>. Answer fast to bank more.</div></div>
+          <div class="rules-row"><div class="ic">✅</div><div class="tx"><b>Correct</b> adds the live value to your bank.</div></div>
+          <div class="rules-row"><div class="ic">❌</div><div class="tx"><b>Wrong</b> subtracts the live value — speed cuts both ways.</div></div>
+          <div class="rules-row"><div class="ic">🎡</div><div class="tx">Survive to the halfway mark for a <b>Bonus Spin</b> — land <b>BINGO</b> for $2,000.</div></div>
+        </div>
+        <div class="cta"><button class="btn" id="startBtn">Start Round</button></div>
+      </div>
+
+      <!-- PRE-ROLL -->
+      <div id="screenPreroll" class="preroll hidden">
+        <div class="qn" id="prerollQ">Question 1 of 10</div>
+        <div class="cat" id="prerollCat"></div>
+        <div class="count" id="prerollCount">3</div>
+      </div>
+
+      <!-- PLAY -->
+      <div id="screenPlay" class="play hidden">
+        <div class="play-head">
+          <span class="chip" id="catChip">Category</span>
+          <span class="qprog" id="qProg">Q1 / 10</span>
+        </div>
+        <div class="meter">
+          <div class="val money" id="meterValue">$1,000</div>
+          <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+        </div>
+        <div class="qbody" id="questionBody">…</div>
+        <div class="options" id="optionsGrid"></div>
+        <div class="reveal" id="revealBox"></div>
+      </div>
+
+      <!-- ROUND INTRO -->
+      <div id="screenRoundIntro" class="roundintro hidden">
+        <div class="ri-badge" id="riIcon">✝</div>
+        <div class="ri-num" id="riNum">Round 1</div>
+        <div class="ri-name" id="riName">Catholic Trivia</div>
+        <div class="ri-sub" id="riSub">The classics</div>
+        <div class="ri-meta" id="riMeta"></div>
+        <div class="cta"><button class="btn" id="beginRoundBtn">Begin Round</button></div>
+      </div>
+
+      <!-- NEXT ROUND / DIFFICULTY -->
+      <div id="screenNextRound" class="nextround hidden">
+        <div class="kicker">Round Complete</div>
+        <h2 id="nrTitle">Next Round</h2>
+        <div class="nr-bank">Bank so far · <b id="nrBank" class="money">$0</b></div>
+        <div class="nr-q">How do you want the next round?</div>
+        <div class="nr-choices">
+          <button class="nr-choice" data-d="easier"><span class="nr-emoji">🍼</span><span class="nr-lbl">Easier</span></button>
+          <button class="nr-choice" data-d="same"><span class="nr-emoji">⚖️</span><span class="nr-lbl">Same</span></button>
+          <button class="nr-choice" data-d="harder"><span class="nr-emoji">🔥</span><span class="nr-lbl">Harder</span></button>
+        </div>
+        <div class="nr-quip" id="nrQuip"></div>
+      </div>
+
+      <!-- MANNA REACTION GAME -->
+      <div id="screenManna" class="manna hidden">
+        <div class="kicker">Desert Break</div>
+        <h2>Manna from Heaven</h2>
+        <div class="blurb">Tap the falling manna to fill your basket. Full basket in <b>under 5s = $200</b>. Take your time and still bank <b>$50</b>.</div>
+        <div class="manna-hud">
+          <div class="hud-item"><span class="hud-k">Time</span><span class="hud-v money" id="mannaTimer">0.0s</span></div>
+          <div class="hud-item"><span class="hud-k">Basket</span><span class="hud-v money" id="mannaCount">0 / 10</span></div>
+        </div>
+        <div class="manna-field" id="mannaField">
+          <div class="manna-basket"><span class="basket-emoji">🧺</span><div class="basket-bar"><div id="basketFill"></div></div></div>
+        </div>
+        <div class="result" id="mannaResult"></div>
+        <div class="cta"><button class="btn" id="mannaBtn">Start Collecting</button></div>
+      </div>
+
+      <!-- MATCH-3 (Gifts from Heaven) -->
+      <div id="screenMatch3" class="match3 hidden">
+        <div class="kicker">Gifts from Heaven</div>
+        <h2>Heavenly Match-3</h2>
+        <div class="blurb">Tap a symbol, then a neighbor, to swap. Line up <b>3+</b> to clear them — new gifts <b>fall from heaven</b>. You have <b>15 moves</b>.</div>
+        <div class="manna-hud">
+          <div class="hud-item"><span class="hud-k">Moves</span><span class="hud-v money" id="match3Moves">15</span></div>
+          <div class="hud-item"><span class="hud-k">Cleared</span><span class="hud-v money" id="match3Score">0</span></div>
+        </div>
+        <div class="match3-field" id="match3Board"></div>
+        <div class="result" id="match3Result"></div>
+        <div class="cta"><button class="btn" id="match3Btn">Start Matching</button></div>
+      </div>
+
+      <!-- MOTHER MARY MATCH-3 (3 tiers) -->
+      <div id="screenMaryMatch3" class="match3 hidden">
+        <div class="kicker">Immaculate Garden</div>
+        <h2>Mother Mary Match-3</h2>
+        <div class="blurb">Three tiers of grace. Match Marian symbols — <b>🌹 👑 ⭐ 🕊️ 💙 ⚜️</b> — that fall from heaven. Reach each tier's goal to advance.</div>
+        <div class="manna-hud">
+          <div class="hud-item"><span class="hud-k">Tier</span><span class="hud-v money" id="maryTier">1 / 3</span></div>
+          <div class="hud-item"><span class="hud-k">Moves</span><span class="hud-v money" id="maryMoves">12</span></div>
+          <div class="hud-item"><span class="hud-k">Goal</span><span class="hud-v money" id="maryGoal">0 / 15</span></div>
+        </div>
+        <div class="match3-field mary-field" id="maryBoard">
+          <div class="mary-banner" id="maryBanner"></div>
+        </div>
+        <div class="result" id="maryResult"></div>
+        <div class="cta"><button class="btn" id="maryBtn">Begin Tier 1</button></div>
+      </div>
+
+      <!-- BONUS WHEEL -->
+      <div id="screenBonus" class="bonus hidden">
+        <div class="kicker">Halfway Bonus</div>
+        <h2>Bonus Spin</h2>
+        <div class="blurb">Free points, no risk. Tap <b>Spin</b> and hope for <b>BINGO</b> ($2,000).</div>
+        <div class="wheel-wrap">
+          <div class="pointer"></div>
+          <svg id="wheelSVG" viewBox="0 0 300 300"><g id="wheelSpin"></g></svg>
+          <div class="hub"></div>
+        </div>
+        <div class="result" id="wheelResult"></div>
+        <div class="cta"><button class="btn" id="spinBtn">Spin</button></div>
+      </div>
+
+      <!-- RESULTS -->
+      <div id="screenResults" class="results hidden">
+        <div class="res-hero" id="resHero">
+          <div class="res-emoji" id="resEmoji">🙂</div>
+          <div class="lbl">Final Bank</div>
+          <div class="final money" id="finalBank">$0</div>
+          <div class="headline" id="resHeadline"></div>
+          <div class="res-stats" id="resStats"></div>
+        </div>
+        <div class="res-section-title">Round Breakdown</div>
+        <div class="res-list" id="resList"></div>
+        <div class="cta"><button class="btn" id="playAgainBtn">Play Again</button></div>
+      </div>
+    </div>
+
+    <!-- SAINTLY SNEEZE (easter egg overlay) -->
+    <div id="sneezeOverlay" class="sneeze hidden" aria-hidden="true">
+      <div class="sneeze-dim"></div>
+      <div class="sneeze-stage">
+        <div class="sneeze-halo">😇</div>
+        <div class="sneeze-saint">🧔</div>
+        <div class="sneeze-sparkles" id="sneezeSparkles"></div>
+        <div class="sneeze-puff">💨</div>
+        <div class="sneeze-text">Bless you!</div>
+        <div class="sneeze-sub">Even saints need blessings! <span class="sneeze-amt" id="sneezeAmt">+$75</span></div>
+      </div>
+    </div>
+
+    <!-- HOLY COFFEE (special wheel result overlay) -->
+    <div id="coffeeOverlay" class="holycoffee hidden" aria-hidden="true">
+      <div class="hc-dim"></div>
+      <div class="hc-stage">
+        <div class="hc-steam" id="hcSteam"></div>
+        <div class="hc-mug">☕<span class="hc-cross">✝️</span></div>
+        <div class="hc-overflow" id="hcOverflow"></div>
+        <div class="hc-wink">😉</div>
+        <div class="hc-quip">“Fuel for your faith journey!”</div>
+        <div class="hc-text">Holy Coffee!</div>
+        <div class="hc-sub">Even Jesus needed time to rest — have a blessed cup! <span class="hc-amt" id="hcAmt">+$150</span></div>
+      </div>
+    </div>
+
+    <!-- SLEEPING ANGEL (time-out gag overlay) -->
+    <div id="angelOverlay" class="angel hidden" aria-hidden="true">
+      <div class="angel-dim"></div>
+      <div class="angel-stage">
+        <div class="angel-scene">
+          <span class="angel-cloud">☁️</span>
+          <span class="angel-fig" id="angelFig">👼</span>
+          <span class="angel-zzz">💤</span>
+          <span class="angel-glass" id="angelGlass">⏳</span>
+        </div>
+        <div class="angel-text">The guardian angel dozed off!</div>
+        <div class="angel-sub">Time’s up — <i>“Oops… I nodded off!”</i> 🤷</div>
+      </div>
+    </div>
+
+    <!-- SPLASH / INTRO (plays briefly on load) -->
+    <div id="screenSplash" class="splash">
+      <video id="splashVideo" class="splash-video" playsinline muted autoplay preload="auto">
+        <source src="intro.mp4" type="video/mp4" />
+      </video>
+      <div class="splash-skip" id="splashSkip">Tap to skip</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   CatholicsApp.Engine — pure logic, no DOM. All money in integer cents.
+   Value curve (revised):
+     [grace 350ms] → hold $1,000 for 2s → drain $100/s to $0 (10s)
+       → sit at $0 for 1s → drain $100/s to floor −$100 (1s) → hold floor
+   ========================================================================= */
+const QUESTIONS_PER_ROUND = 10;
+const START_CENTS   = 100_000;   // $1,000
+const DRAIN_PER_SEC = 10_000;    // $100 / second
+const FLOOR_CENTS   = -10_000;   // -$100
+const GRACE_MS      = 350;
+const HOLD_FULL_MS  = 2000;      // hold full value before countdown starts
+const DRAIN_ZERO_MS = 10000;     // $1000 -> $0
+const HOLD_ZERO_MS  = 1000;      // sit at $0
+const TIMEOUT_MS      = 16_000;  // auto-timeout
+const TIMEOUT_PENALTY = 10_000;  // flat -$100
+const WRONG_PENALTY   = 10_000;  // wrong AFTER the clock hits $0 → flat -$100 (before $0 → no penalty)
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Authoritative value at elapsed ms since served.
+function valueAtElapsed(elapsedMs) {
+  let t = elapsedMs - GRACE_MS;
+  if (t <= 0) return START_CENTS;
+  if (t <= HOLD_FULL_MS) return START_CENTS;         // phase 1: hold full
+  t -= HOLD_FULL_MS;
+  if (t <= DRAIN_ZERO_MS) {                           // phase 2: drain to $0
+    return START_CENTS - Math.round((t / 1000) * DRAIN_PER_SEC);
+  }
+  t -= DRAIN_ZERO_MS;
+  if (t <= HOLD_ZERO_MS) return 0;                   // phase 3: sit at $0
+  t -= HOLD_ZERO_MS;
+  const v = 0 - Math.round((t / 1000) * DRAIN_PER_SEC); // phase 4: to floor
+  return Math.max(FLOOR_CENTS, v);
+}
+
+class RoundEngine {
+  constructor(pack, questionsPerRound = QUESTIONS_PER_ROUND, initialBankCents = 0) {
+    this.pack = pack;
+    this.n = Math.min(questionsPerRound, pack.length);
+    this.order = shuffle(pack).slice(0, this.n);
+    this.idx = -1;
+    this.bankCents = initialBankCents;
+    this.state = 'NotStarted';
+    this.current = null;
+    this.servedAt = 0;
+    this.breakDone = false;
+    this.log = [];
+  }
+  get questionNumber() { return this.idx + 1; }
+
+  serveNext(now) {
+    if (this.idx + 1 >= this.n) { this.state = 'Complete'; throw new Error('Round complete'); }
+    this.idx++;
+    const src = this.order[this.idx];
+    const correctText = src.options[src.correctIndex];
+    const shuffled = shuffle(src.options);
+    const correctIndex = shuffled.indexOf(correctText);
+    this.current = { id: src.id, category: src.category, body: src.body, options: shuffled, correctIndex, citation: src.citation };
+    this.servedAt = now;
+    this.state = 'AwaitingAnswer';
+    return this.current;
+  }
+  currentValueCents(now) { return valueAtElapsed(now - this.servedAt); }
+
+  submitAnswer(chosenIndex, now) {
+    if (this.state !== 'AwaitingAnswer') throw new Error('Not awaiting answer');
+    const elapsedMs = now - this.servedAt;
+    const value = valueAtElapsed(elapsedMs);
+    const wasCorrect = chosenIndex === this.current.correctIndex;
+    // Correct: bank the live value, snapped to a whole dollar (never below $0).
+    // Wrong before the clock hits $0: no penalty. Wrong at/after $0: flat -$100.
+    let delta;
+    if (wasCorrect) delta = Math.max(0, Math.round(value / 100) * 100);   // whole dollars only — no cents
+    else delta = value > 0 ? 0 : -WRONG_PENALTY;
+    this.bankCents += delta;
+    this.state = 'Revealing';
+    const r = { wasCorrect, deltaCents: delta, correctIndex: this.current.correctIndex, chosenIndex, elapsedMs, citation: this.current.citation, timedOut: false };
+    this._record(r); return r;
+  }
+  timeout(now) {
+    if (this.state !== 'AwaitingAnswer') throw new Error('Not awaiting answer');
+    const elapsedMs = now - this.servedAt;
+    this.bankCents -= TIMEOUT_PENALTY;
+    this.state = 'Revealing';
+    const r = { wasCorrect: false, deltaCents: -TIMEOUT_PENALTY, correctIndex: this.current.correctIndex, chosenIndex: -1, elapsedMs, citation: this.current.citation, timedOut: true };
+    this._record(r); return r;
+  }
+  awardBonus(cents, label, kind) {
+    this.bankCents += cents;
+    this.breakDone = true;
+    this.log.push({ qNum: '★', category: kind || 'Bonus', body: label, yourAnswer: '—', correctAnswer: '—', elapsedMs: 0, deltaCents: cents, wasCorrect: cents > 0, timedOut: false, bonus: true });
+  }
+  _record(r) {
+    this.log.push({
+      qNum: this.questionNumber, category: this.current.category, body: this.current.body,
+      yourAnswer: r.chosenIndex >= 0 ? this.current.options[r.chosenIndex] : '—',
+      correctAnswer: this.current.options[this.current.correctIndex],
+      elapsedMs: r.elapsedMs, deltaCents: r.deltaCents, wasCorrect: r.wasCorrect, timedOut: r.timedOut, bonus: false,
+    });
+  }
+}
+
+/* formatting */
+function fmtCents(c) {
+  const neg = c < 0;
+  const d = Math.abs(c) / 100;
+  return (neg ? '−$' : '$') + d.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+function fmtDelta(c) {
+  return (c >= 0 ? '+$' : '−$') + (Math.abs(c) / 100).toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
+/* =========================================================================
+   Audio (WebAudio, no external assets): tick, chime, buzz, applause
+   ========================================================================= */
+let audioCtx = null;
+function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+function tone(freq, dur, type = 'square', vol = 0.06, when = 0) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq; g.gain.value = vol;
+  o.connect(g); g.connect(audioCtx.destination);
+  const t = audioCtx.currentTime + when;
+  o.start(t); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.stop(t + dur);
+}
+const sndTick    = () => tone(880, 0.05, 'square', 0.025);
+const sndCorrect = () => { tone(660, 0.12, 'triangle', 0.08); tone(990, 0.18, 'triangle', 0.08, 0.11); tone(1320, 0.22, 'triangle', 0.06, 0.22); };
+const sndWrong   = () => tone(150, 0.4, 'sawtooth', 0.09);
+const sndJackpot = () => { [523,659,784,1047,1319].forEach((f,i)=>tone(f,0.25,'triangle',0.08,i*0.09)); };
+function applause() {
+  if (!audioCtx) return;
+  const dur = 1.6, sr = audioCtx.sampleRate, len = Math.floor(sr * dur);
+  const buf = audioCtx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    const env = Math.min(1, t / 0.15) * Math.max(0, 1 - (t - 0.15) / (dur - 0.15));
+    // sparse random claps layered into a wash
+    const clap = (Math.random() < 0.6) ? (Math.random() * 2 - 1) : (Math.random() * 2 - 1) * 0.25;
+    d[i] = clap * env;
+  }
+  const src = audioCtx.createBufferSource(); src.buffer = buf;
+  const bp = audioCtx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1600; bp.Q.value = 0.6;
+  const hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 700;
+  const g = audioCtx.createGain(); g.gain.value = 0.5;
+  src.connect(bp); bp.connect(hp); hp.connect(g); g.connect(audioCtx.destination);
+  src.start();
+}
+
+/* filtered noise burst helper (for sneeze splat / coffee pour) */
+function noiseBurst(dur, freq, q, vol, when = 0, type = 'bandpass') {
+  if (!audioCtx) return;
+  const sr = audioCtx.sampleRate, len = Math.floor(sr * dur);
+  const buf = audioCtx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) { const e = Math.min(1, i / (sr * 0.02)) * Math.max(0, 1 - i / len); d[i] = (Math.random() * 2 - 1) * e; }
+  const src = audioCtx.createBufferSource(); src.buffer = buf;
+  const f = audioCtx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = audioCtx.createGain(); g.gain.value = vol;
+  src.connect(f); f.connect(g); g.connect(audioCtx.destination);
+  src.start(audioCtx.currentTime + when);
+}
+
+// A comically loud "ACHOO!" — quick sniffle-up, then a big descending splat.
+function sndAchoo() {
+  if (!audioCtx) return;
+  tone(300, 0.10, 'sawtooth', 0.045, 0.00);   // "ah-"
+  tone(440, 0.10, 'sawtooth', 0.05, 0.10);     // "ah--"
+  const t = audioCtx.currentTime + 0.22;       // "CHOO!"
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(920, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.34);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 0.42);
+  noiseBurst(0.34, 1200, 0.7, 0.13, 0.24);     // wet splat
+}
+
+// A gentle choir warmly harmonizing "Bless you" — soft major chord, resolving up.
+function sndChoir() {
+  if (!audioCtx) return;
+  const chord = [523.25, 659.25, 783.99, 1046.5]; // C E G C
+  chord.forEach((f) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    const t = audioCtx.currentTime + 0.02;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.045, t + 0.16);
+    g.gain.exponentialRampToValueAtTime(0.035, t + 0.55);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.15);
+    o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 1.2);
+  });
+}
+
+// Satisfying pour — steady liquid stream with a couple of bubbly plinks.
+function sndPour() {
+  if (!audioCtx) return;
+  noiseBurst(0.7, 900, 1.2, 0.08, 0.0);        // the pour stream
+  tone(520, 0.10, 'sine', 0.05, 0.18);          // plink
+  tone(430, 0.10, 'sine', 0.05, 0.34);          // plink
+  tone(600, 0.10, 'sine', 0.045, 0.5);          // plink
+}
+
+// A soft angelic "ahhh" sigh — warm sustained chord, a touch lower & breathier than the choir.
+function sndAhh() {
+  if (!audioCtx) return;
+  const chord = [392.0, 523.25, 659.25]; // G C E
+  chord.forEach((f) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    const t = audioCtx.currentTime + 0.04;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.04, t + 0.3);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+    o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 1.35);
+  });
+}
+
+// A soft cartoon snore — one low wobbling "zzz".
+function sndSnore() {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'sine';
+  const t = audioCtx.currentTime;
+  o.frequency.setValueAtTime(80, t);
+  o.frequency.linearRampToValueAtTime(135, t + 0.32);
+  o.frequency.linearRampToValueAtTime(68, t + 0.7);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.05, t + 0.26);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.72);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 0.74);
+}
+</script>
+
+<script>
+/* =========================================================================
+   QUESTION DATA (embedded — §7 sample pack)
+   ========================================================================= */
+const PACK = { "packName": "Demo Pack v1", "questions": [
+  { "id": 1, "category": "Doctrine", "body": "Which sacrament is described as 'the source and summit of the Christian life'?", "options": ["Baptism","The Eucharist","Confirmation","Holy Orders"], "correctIndex": 1, "citation": "CCC ¶1324; Lumen Gentium 11" },
+  { "id": 2, "category": "Saints", "body": "Which saint is credited with driving the snakes out of Ireland (legendarily — Ireland never had snakes)?", "options": ["St. Brigid","St. Columba","St. Patrick","St. Brendan"], "correctIndex": 2, "citation": "Hagiographic tradition; noted as legend" },
+  { "id": 3, "category": "Bible", "body": "How many books are in the Catholic Old Testament?", "options": ["39","42","46","50"], "correctIndex": 2, "citation": "Council of Trent, Session IV (1546)" },
+  { "id": 4, "category": "History", "body": "The Council of Nicaea, which gave us the core of the Nicene Creed, was held in what year?", "options": ["A.D. 325","A.D. 381","A.D. 451","A.D. 1054"], "correctIndex": 0, "citation": "First Council of Nicaea, A.D. 325" },
+  { "id": 5, "category": "Saint or Metal Band?", "body": "'Sepultura' — canonized saint or metal band?", "options": ["Saint","Metal band","Both","Neither"], "correctIndex": 1, "citation": "Sepultura: Brazilian metal band, f. 1984" },
+  { "id": 6, "category": "Liturgy", "body": "What liturgical color is used during Advent and Lent?", "options": ["Green","Red","Violet","White"], "correctIndex": 2, "citation": "GIRM ¶346" },
+  { "id": 7, "category": "Bible", "body": "Which Gospel begins with 'In the beginning was the Word'?", "options": ["Matthew","Mark","Luke","John"], "correctIndex": 3, "citation": "John 1:1" },
+  { "id": 8, "category": "Popes", "body": "Who was the first pope?", "options": ["St. Paul","St. Peter","St. Linus","St. Clement"], "correctIndex": 1, "citation": "Matthew 16:18; CCC ¶881" },
+  { "id": 9, "category": "Saints", "body": "St. Thomas Aquinas's massive unfinished work of systematic theology is called the…", "options": ["Summa Theologiae","City of God","Confessions","Imitation of Christ"], "correctIndex": 0, "citation": "St. Thomas Aquinas, Summa Theologiae (1265–1274)" },
+  { "id": 10, "category": "History", "body": "The Great Schism of 1054 split the Church between Rome and which other see?", "options": ["Alexandria","Antioch","Constantinople","Jerusalem"], "correctIndex": 2, "citation": "East–West Schism, 1054" },
+  { "id": 11, "category": "Vatican or Fiction?", "body": "The Vatican has its own ATMs with instructions in Latin. Vatican fact or fiction?", "options": ["Vatican fact","Fiction","Only on feast days","Only for cardinals"], "correctIndex": 0, "citation": "IOR/Vatican City ATMs historically offered Latin prompts" },
+  { "id": 12, "category": "Doctrine", "body": "How many sacraments does the Catholic Church recognize?", "options": ["Five","Six","Seven","Ten"], "correctIndex": 2, "citation": "CCC ¶1113" },
+  { "id": 13, "category": "Liturgy", "body": "The word 'Eucharist' comes from a Greek word meaning what?", "options": ["Sacrifice","Thanksgiving","Bread","Assembly"], "correctIndex": 1, "citation": "CCC ¶1328 (eucharistein)" },
+  { "id": 14, "category": "Saints", "body": "Which saint, a former soldier, founded the Jesuits?", "options": ["St. Francis Xavier","St. Ignatius of Loyola","St. Dominic","St. Benedict"], "correctIndex": 1, "citation": "Society of Jesus founded 1540; St. Ignatius of Loyola" },
+  { "id": 15, "category": "Bible", "body": "In the parable of the Prodigal Son, what does the father do when he sees his son returning?", "options": ["Waits at the door","Sends a servant","Runs to embrace him","Demands repayment"], "correctIndex": 2, "citation": "Luke 15:20" },
+  { "id": 16, "category": "Popes", "body": "White smoke from the Sistine Chapel chimney signals what?", "options": ["A council has ended","A new pope has been elected","The conclave has begun","A papal document was signed"], "correctIndex": 1, "citation": "Conclave custom, Universi Dominici Gregis" },
+  { "id": 17, "category": "History", "body": "Which 20th-century council (1962–1965) permitted Mass in vernacular languages?", "options": ["Vatican I","Trent","Vatican II","Lateran IV"], "correctIndex": 2, "citation": "Sacrosanctum Concilium ¶36 (Vatican II)" },
+  { "id": 18, "category": "Saint or Metal Band?", "body": "'Perpetua' — early Christian martyr or metal band?", "options": ["Martyr","Metal band","Both exist","Neither"], "correctIndex": 0, "citation": "Ss. Perpetua and Felicity, martyred A.D. 203" },
+  { "id": 19, "category": "Doctrine", "body": "Which sacrament can, in an emergency, be validly administered by anyone — even a non-Christian — with the right intention?", "options": ["Confirmation","Baptism","Anointing of the Sick","Eucharist"], "correctIndex": 1, "citation": "CCC ¶1256" },
+  { "id": 20, "category": "Liturgy", "body": "What is the name of the Sunday that marks the beginning of Holy Week?", "options": ["Laetare Sunday","Gaudete Sunday","Palm Sunday","Divine Mercy Sunday"], "correctIndex": 2, "citation": "Roman Missal, Palm Sunday of the Passion of the Lord" },
+  { "id": 21, "category": "Bible", "body": "How many Gospels are in the New Testament?", "options": ["Three","Four","Seven","Twelve"], "correctIndex": 1, "citation": "Matthew, Mark, Luke & John — USCCB, Books of the Bible" },
+  { "id": 22, "category": "Bible", "body": "What is the first book of the Bible?", "options": ["Exodus","Psalms","Genesis","John"], "correctIndex": 2, "citation": "Genesis — New Advent Catholic Encyclopedia" },
+  { "id": 23, "category": "Bible", "body": "Who baptized Jesus in the Jordan River?", "options": ["Peter","John the Baptist","Andrew","Elijah"], "correctIndex": 1, "citation": "Matthew 3:13–17" },
+  { "id": 24, "category": "Bible", "body": "In what town was Jesus born?", "options": ["Nazareth","Jerusalem","Bethlehem","Capernaum"], "correctIndex": 2, "citation": "Luke 2:4–7; cf. Micah 5:2" },
+  { "id": 25, "category": "Bible", "body": "How many apostles did Jesus choose?", "options": ["Seven","Ten","Twelve","Seventy"], "correctIndex": 2, "citation": "Mark 3:14" },
+  { "id": 26, "category": "Bible", "body": "Which apostle denied Jesus three times before the cock crowed?", "options": ["Judas","Peter","Thomas","John"], "correctIndex": 1, "citation": "Luke 22:54–62" },
+  { "id": 27, "category": "Bible", "body": "What was Jesus's first miracle in John's Gospel?", "options": ["Healing a leper","Walking on water","Turning water into wine","Feeding the 5,000"], "correctIndex": 2, "citation": "John 2:1–11 (the Wedding at Cana)" },
+  { "id": 28, "category": "Bible", "body": "Who wrote the majority of the New Testament epistles?", "options": ["St. Peter","St. Paul","St. John","St. James"], "correctIndex": 1, "citation": "Pauline Epistles — USCCB, New Testament" },
+  { "id": 29, "category": "Saints", "body": "Who is the patron saint of animals and ecology?", "options": ["St. Francis of Assisi","St. Dominic","St. Jerome","St. Benedict"], "correctIndex": 0, "citation": "St. Francis of Assisi — EWTN, Saints" },
+  { "id": 30, "category": "Saints", "body": "By what nickname is St. Thérèse of Lisieux known?", "options": ["The Little Flower","The Iron Lady","The Desert Rose","The Good Shepherd"], "correctIndex": 0, "citation": "St. Thérèse of Lisieux, Doctor of the Church" },
+  { "id": 31, "category": "Saints", "body": "Which saint wrote the classics 'Confessions' and 'City of God'?", "options": ["St. Jerome","St. Ambrose","St. Augustine","St. Gregory"], "correctIndex": 2, "citation": "St. Augustine of Hippo — New Advent" },
+  { "id": 32, "category": "Saints", "body": "Who was the devoted mother of St. Augustine, herself a saint?", "options": ["St. Monica","St. Helena","St. Anne","St. Elizabeth"], "correctIndex": 0, "citation": "St. Monica — EWTN, Saints" },
+  { "id": 33, "category": "Saints", "body": "St. Teresa of Calcutta (Mother Teresa) founded which religious order?", "options": ["Poor Clares","Missionaries of Charity","Daughters of Charity","Carmelites"], "correctIndex": 1, "citation": "Missionaries of Charity, f. 1950 — Vatican.va" },
+  { "id": 34, "category": "Saints", "body": "Which saint is popularly invoked as the patron of lost items?", "options": ["St. Jude","St. Anthony of Padua","St. Christopher","St. Nicholas"], "correctIndex": 1, "citation": "St. Anthony of Padua — EWTN" },
+  { "id": 35, "category": "Saints", "body": "St. Maximilian Kolbe gave his life for another prisoner at which camp?", "options": ["Dachau","Buchenwald","Auschwitz","Treblinka"], "correctIndex": 2, "citation": "St. Maximilian Kolbe, martyred 1941 — Vatican.va" },
+  { "id": 36, "category": "Saints", "body": "Which Doctor of the Church is called the 'Angelic Doctor'?", "options": ["St. Bonaventure","St. Thomas Aquinas","St. Albert the Great","St. Anselm"], "correctIndex": 1, "citation": "St. Thomas Aquinas — New Advent" },
+  { "id": 37, "category": "Doctrine", "body": "How many Persons are there in the Holy Trinity?", "options": ["One","Two","Three","Four"], "correctIndex": 2, "citation": "CCC ¶253" },
+  { "id": 38, "category": "Doctrine", "body": "What term describes the bread and wine becoming the Body and Blood of Christ?", "options": ["Consubstantiation","Transubstantiation","Adoration","Communion"], "correctIndex": 1, "citation": "CCC ¶1376; Council of Trent" },
+  { "id": 39, "category": "Doctrine", "body": "What are the three theological virtues?", "options": ["Prudence, Justice, Temperance","Faith, Hope, and Charity","Poverty, Chastity, Obedience","Wisdom, Knowledge, Fear"], "correctIndex": 1, "citation": "CCC ¶1813; 1 Corinthians 13:13" },
+  { "id": 40, "category": "Doctrine", "body": "How many Commandments did God give Moses?", "options": ["Seven","Ten","Twelve","Forty"], "correctIndex": 1, "citation": "Exodus 20:1–17 — USCCB" },
+  { "id": 41, "category": "Doctrine", "body": "Which sacrament forgives sins committed after Baptism?", "options": ["Confirmation","Anointing of the Sick","Reconciliation","Matrimony"], "correctIndex": 2, "citation": "CCC ¶1446" },
+  { "id": 42, "category": "Doctrine", "body": "How many capital (deadly) sins does the Church traditionally list?", "options": ["Five","Seven","Ten","Three"], "correctIndex": 1, "citation": "CCC ¶1866" },
+  { "id": 43, "category": "Doctrine", "body": "What is the state of final purification for those who die in God's grace but imperfectly purified?", "options": ["Limbo","Purgatory","Hades","Sheol"], "correctIndex": 1, "citation": "CCC ¶1030–1031" },
+  { "id": 44, "category": "History", "body": "The Edict of Milan (A.D. 313), granting tolerance to Christians, is linked to which emperor?", "options": ["Nero","Constantine","Diocletian","Augustus"], "correctIndex": 1, "citation": "Edict of Milan, A.D. 313 — New Advent" },
+  { "id": 45, "category": "History", "body": "Martin Luther's 95 Theses (1517) sparked which movement?", "options": ["The Crusades","The Protestant Reformation","The Counter-Reformation","The Great Schism"], "correctIndex": 1, "citation": "The Reformation, 1517 — New Advent" },
+  { "id": 46, "category": "History", "body": "Which ecumenical council (1545–1563) responded to the Reformation?", "options": ["Nicaea","Trent","Vatican I","Chalcedon"], "correctIndex": 1, "citation": "Council of Trent — Vatican.va" },
+  { "id": 47, "category": "History", "body": "St. Jerome's Latin translation of the Bible is known as the?", "options": ["Septuagint","Vulgate","Douay","Peshitta"], "correctIndex": 1, "citation": "The Vulgate — New Advent, St. Jerome" },
+  { "id": 48, "category": "History", "body": "Which religious order, shaping Western monasticism, was founded by St. Benedict?", "options": ["Franciscans","Dominicans","Benedictines","Jesuits"], "correctIndex": 2, "citation": "Rule of St. Benedict — EWTN" },
+  { "id": 49, "category": "History", "body": "The Council of Chalcedon (451) defined that Christ has how many natures?", "options": ["One nature","Two natures","Three natures","No nature"], "correctIndex": 1, "citation": "Council of Chalcedon, A.D. 451 — New Advent" },
+  { "id": 50, "category": "History", "body": "The First Vatican Council (1869–1870) solemnly defined which doctrine?", "options": ["The Assumption","Papal infallibility","Transubstantiation","The Immaculate Conception"], "correctIndex": 1, "citation": "Vatican I, Pastor Aeternus (1870) — Vatican.va" },
+  { "id": 51, "category": "Liturgy", "body": "Which season of preparation precedes Christmas?", "options": ["Lent","Advent","Ordinary Time","Epiphany"], "correctIndex": 1, "citation": "Advent — USCCB, Liturgical Year" },
+  { "id": 52, "category": "Liturgy", "body": "How many days is the penitential season of Lent?", "options": ["Twelve","Thirty","Forty","Fifty"], "correctIndex": 2, "citation": "Lent (40 days) — USCCB" },
+  { "id": 53, "category": "Liturgy", "body": "Which day marks the beginning of Lent?", "options": ["Palm Sunday","Ash Wednesday","Holy Thursday","Pentecost"], "correctIndex": 1, "citation": "Ash Wednesday — USCCB" },
+  { "id": 54, "category": "Liturgy", "body": "Which liturgical color is used for Easter and Christmas?", "options": ["Green","Red","White","Violet"], "correctIndex": 2, "citation": "GIRM ¶346 — USCCB" },
+  { "id": 55, "category": "Liturgy", "body": "What is the central act of Catholic worship, the 'source and summit' of the faith?", "options": ["The Rosary","The Mass","Adoration","Benediction"], "correctIndex": 1, "citation": "CCC ¶1324 (the Eucharist)" },
+  { "id": 56, "category": "Popes", "body": "Who is regarded as the first pope?", "options": ["St. Paul","St. Peter","St. Linus","St. Clement"], "correctIndex": 1, "citation": "Matthew 16:18; CCC ¶881" },
+  { "id": 57, "category": "Popes", "body": "Which Roman basilica is the pope's own cathedral church?", "options": ["St. Peter's","St. John Lateran","St. Mary Major","St. Paul Outside the Walls"], "correctIndex": 1, "citation": "Archbasilica of St. John Lateran — Vatican.va" },
+  { "id": 58, "category": "Popes", "body": "Pope St. John Paul II led the Church from 1978 until which year?", "options": ["1998","2000","2005","2010"], "correctIndex": 2, "citation": "Pontificate 1978–2005 — Vatican.va" },
+  { "id": 59, "category": "Popes", "body": "Which pope convened the Second Vatican Council?", "options": ["Pius XII","St. John XXIII","St. Paul VI","Leo XIII"], "correctIndex": 1, "citation": "St. John XXIII opened Vatican II, 1962 — Vatican.va" },
+  { "id": 60, "category": "Popes", "body": "What papal name did Cardinal Jorge Mario Bergoglio take in 2013?", "options": ["Benedict","Francis","John Paul","Pius"], "correctIndex": 1, "citation": "Pope Francis, elected 2013 — Vatican.va" },
+  { "id": 61, "category": "Bible", "body": "How many days had Lazarus been in the tomb before Jesus raised him?", "options": ["One","Two","Three","Four"], "correctIndex": 3, "citation": "John 11:39" },
+  { "id": 62, "category": "Bible", "body": "According to Genesis, what did God create on the first day?", "options": ["The sun","Light","The animals","Adam"], "correctIndex": 1, "citation": "Genesis 1:3" },
+  { "id": 63, "category": "Saints", "body": "Which Spanish Carmelite mystic wrote 'The Interior Castle'?", "options": ["St. Teresa of Ávila","St. Catherine of Siena","St. Faustina","St. Edith Stein"], "correctIndex": 0, "citation": "St. Teresa of Ávila, Doctor of the Church — New Advent" },
+  { "id": 64, "category": "Doctrine", "body": "'The Real Presence' is the belief that Christ is truly present in the?", "options": ["Scriptures","Eucharist","Tabernacle candle","Holy water"], "correctIndex": 1, "citation": "CCC ¶1374" },
+  { "id": 65, "category": "History", "body": "The medieval Crusades were largely aimed at recovering which holy city?", "options": ["Rome","Athens","Jerusalem","Antioch"], "correctIndex": 2, "citation": "The Crusades — New Advent" },
+  { "id": 66, "category": "Popes", "body": "Which pope resigned in 2013, the first to do so in nearly 600 years?", "options": ["St. John Paul II","Benedict XVI","John Paul I","Paul VI"], "correctIndex": 1, "citation": "Pope Benedict XVI resigned 2013 — Vatican.va" },
+  { "id": 67, "category": "Liturgy", "body": "What is the small round unleavened bread consecrated at Mass called?", "options": ["A loaf","A host","A wafer of manna","A relic"], "correctIndex": 1, "citation": "The Host (Eucharistic bread) — CCC ¶1333" },
+  { "id": 68, "category": "Doctrine", "body": "Which prayer taught by Jesus begins 'Our Father, who art in heaven'?", "options": ["The Hail Mary","The Our Father","The Apostles' Creed","The Glory Be"], "correctIndex": 1, "citation": "Matthew 6:9–13 (the Lord's Prayer)" }
+]};
+
+/* Round 2 — Bible Stories (Noah, Jonah, and friends) */
+const PACK2 = { "packName": "Bible Stories", "questions": [
+  { "id": 201, "category": "Noah", "body": "How many days and nights did it rain during the great flood?", "options": ["7","12","40","150"], "correctIndex": 2, "citation": "Genesis 7:12" },
+  { "id": 202, "category": "Jonah", "body": "For how long was Jonah inside the belly of the great fish?", "options": ["One day","Three days and three nights","Seven days","Forty days"], "correctIndex": 1, "citation": "Jonah 1:17" },
+  { "id": 203, "category": "Jonah", "body": "To which city was Jonah sent to preach repentance?", "options": ["Babylon","Nineveh","Tarshish","Jericho"], "correctIndex": 1, "citation": "Jonah 1:2" },
+  { "id": 204, "category": "Noah", "body": "What sign did God set in the sky as the covenant after the flood?", "options": ["A rainbow","A dove","A star","A pillar of cloud"], "correctIndex": 0, "citation": "Genesis 9:13" },
+  { "id": 205, "category": "Noah", "body": "How many people were saved aboard the ark?", "options": ["Two","Six","Eight","Twelve"], "correctIndex": 2, "citation": "Genesis 7:13; 1 Peter 3:20" },
+  { "id": 206, "category": "Abraham", "body": "Whom did God ask Abraham to offer as a sacrifice before staying his hand?", "options": ["Ishmael","Isaac","Jacob","Lot"], "correctIndex": 1, "citation": "Genesis 22:2" },
+  { "id": 207, "category": "Moses", "body": "Which sea did God part so the Israelites could escape Egypt?", "options": ["The Dead Sea","The Sea of Galilee","The Red Sea","The Mediterranean"], "correctIndex": 2, "citation": "Exodus 14:21" },
+  { "id": 208, "category": "David", "body": "With what did the young David defeat the giant Goliath?", "options": ["A sword","A sling and a stone","A spear","A bow"], "correctIndex": 1, "citation": "1 Samuel 17:49" },
+  { "id": 209, "category": "Daniel", "body": "Daniel was thrown into a den of what animals?", "options": ["Wolves","Bears","Lions","Serpents"], "correctIndex": 2, "citation": "Daniel 6:16" },
+  { "id": 210, "category": "Exodus", "body": "What food did God rain down from heaven to feed Israel in the desert?", "options": ["Quail","Manna","Bread of the Presence","Honey"], "correctIndex": 1, "citation": "Exodus 16:4" }
+]};
+
+/* Round 3 — The Chosen, Season 1 */
+const PACK3 = { "packName": "The Chosen — Season 1", "questions": [
+  { "id": 301, "category": "The Chosen", "body": "Who portrays Jesus in The Chosen?", "options": ["Jim Caviezel","Jonathan Roumie","Shahar Isaac","Dallas Jenkins"], "correctIndex": 1, "citation": "The Chosen — principal cast" },
+  { "id": 302, "category": "The Chosen", "body": "Who is the creator and director of The Chosen?", "options": ["Dallas Jenkins","Roma Downey","Mel Gibson","Jonathan Roumie"], "correctIndex": 0, "citation": "The Chosen — created & directed by Dallas Jenkins" },
+  { "id": 303, "category": "The Chosen", "body": "In Season 1, by what name is Mary Magdalene known in the Red Quarter before Jesus frees her?", "options": ["Photina","Lilith","Tamar","Eden"], "correctIndex": 1, "citation": "The Chosen S1E1, 'I Have Called You by Name'" },
+  { "id": 304, "category": "The Chosen", "body": "What is Simon (Peter)'s trade when we first meet him?", "options": ["Fisherman","Tax collector","Carpenter","Shepherd"], "correctIndex": 0, "citation": "The Chosen S1; cf. Luke 5" },
+  { "id": 305, "category": "The Chosen", "body": "What was Matthew's occupation before he followed Jesus?", "options": ["Physician","Scribe","Tax collector","Fisherman"], "correctIndex": 2, "citation": "The Chosen S1; cf. Matthew 9:9" },
+  { "id": 306, "category": "The Chosen", "body": "Which Pharisee meets Jesus by night in Season 1?", "options": ["Shmuel","Gaius","Quintus","Nicodemus"], "correctIndex": 3, "citation": "The Chosen S1E7; cf. John 3" },
+  { "id": 307, "category": "The Chosen", "body": "The Chosen is notable for being financed primarily by what means?", "options": ["A major studio","Crowdfunding","A streaming service","A government grant"], "correctIndex": 1, "citation": "The Chosen — record media crowdfunding campaign" },
+  { "id": 308, "category": "The Chosen", "body": "In the Season 1 finale, Jesus reveals He is the Messiah to a Samaritan woman at a well. What is her name in the show?", "options": ["Photina","Ramah","Joanna","Tamar"], "correctIndex": 0, "citation": "The Chosen S1E8, 'I Am He'; cf. John 4" }
+]};
+
+/* Round 4 — American Catholics (saints & celebrities of the New World) */
+const PACK4 = { "packName": "American Catholics", "questions": [
+  { "id": 401, "category": "American Catholics", "body": "Which American priest hosts Ascension's record-breaking 'Bible in a Year' podcast?", "options": ["Fr. Mike Schmitz","Bishop Robert Barron","Fr. James Martin","Jonathan Morris"], "correctIndex": 0, "citation": "Ascension — 'The Bible in a Year (with Fr. Mike Schmitz),' #1 on Apple Podcasts, Jan 2021" },
+  { "id": 402, "category": "American Catholics", "body": "Which priest was a frequent Fox News contributor who later left active ministry and married?", "options": ["Fr. Frank Pavone","Jonathan Morris","Fr. Benedict Groeschel","Fr. James Martin"], "correctIndex": 1, "citation": "Jonathan Morris — former Fox News contributor; laicized 2019, married 2020" },
+  { "id": 403, "category": "American Catholics", "body": "Who was the first person born in the United States to be canonized a saint?", "options": ["St. Katharine Drexel","St. Kateri Tekakwitha","St. Elizabeth Ann Seton","St. Frances Cabrini"], "correctIndex": 2, "citation": "St. Elizabeth Ann Seton — canonized 1975; first U.S.-born saint" },
+  { "id": 404, "category": "American Catholics", "body": "Who was the first Catholic elected President of the United States?", "options": ["Al Smith","Joe Biden","Ronald Reagan","John F. Kennedy"], "correctIndex": 3, "citation": "John F. Kennedy — first Catholic U.S. president, elected 1960" },
+  { "id": 405, "category": "American Catholics", "body": "Which American bishop won an Emmy for his 1950s TV show 'Life Is Worth Living'?", "options": ["Venerable Fulton Sheen","Cardinal Timothy Dolan","Bishop Robert Barron","St. John Neumann"], "correctIndex": 0, "citation": "Venerable Fulton J. Sheen — Emmy for Most Outstanding Television Personality, 1952" },
+  { "id": 406, "category": "American Catholics", "body": "Which Alabama Poor Clare nun founded the global Catholic network EWTN?", "options": ["St. Katharine Drexel","Mother Angelica","Dorothy Day","Mother Teresa"], "correctIndex": 1, "citation": "Mother Angelica founded EWTN in 1981 in Irondale, Alabama" },
+  { "id": 407, "category": "American Catholics", "body": "Who co-founded the Catholic Worker Movement and is now a Servant of God?", "options": ["Dorothy Day","Flannery O'Connor","Thea Bowman","Elizabeth Ann Seton"], "correctIndex": 0, "citation": "Dorothy Day co-founded the Catholic Worker Movement, 1933; cause for canonization open" },
+  { "id": 408, "category": "American Catholics", "body": "Which American bishop founded the 'Word on Fire' media apostolate?", "options": ["Fr. Mike Schmitz","Cardinal Timothy Dolan","Bishop Robert Barron","Venerable Fulton Sheen"], "correctIndex": 2, "citation": "Bishop Robert Barron founded Word on Fire Catholic Ministries, 2000" },
+  { "id": 409, "category": "American Catholics", "body": "In which U.S. city is the Basilica of the National Shrine of the Immaculate Conception, the largest Catholic church in North America?", "options": ["New York City","Baltimore","Washington, D.C.","Boston"], "correctIndex": 2, "citation": "Basilica of the National Shrine of the Immaculate Conception, Washington, D.C. — largest Catholic church in North America" },
+  { "id": 410, "category": "American Catholics", "body": "Which Philadelphia heiress gave away her fortune to found schools for Black and Native Americans and became a saint?", "options": ["St. Frances Cabrini","St. Katharine Drexel","St. Elizabeth Ann Seton","Servant of God Thea Bowman"], "correctIndex": 1, "citation": "St. Katharine Drexel — founded the Sisters of the Blessed Sacrament & Xavier University of Louisiana; canonized 2000" },
+  { "id": 411, "category": "American Catholics", "body": "Which American Trappist monk wrote the spiritual memoir 'The Seven Storey Mountain'?", "options": ["Thomas Merton","Venerable Fulton Sheen","Bishop Robert Barron","Scott Hahn"], "correctIndex": 0, "citation": "Thomas Merton, The Seven Storey Mountain (1948)" },
+  { "id": 412, "category": "American Catholics", "body": "Which Franciscan friar founded the California missions and was canonized in 2015?", "options": ["St. Junípero Serra","St. Damien of Molokai","Bl. Solanus Casey","St. John Neumann"], "correctIndex": 0, "citation": "St. Junípero Serra — canonized 2015, Vatican.va" },
+  { "id": 413, "category": "American Catholics", "body": "St. Frances Xavier Cabrini, patroness of immigrants, ministered chiefly in which U.S. city?", "options": ["Boston","New York City","San Francisco","New Orleans"], "correctIndex": 1, "citation": "Mother Cabrini — first U.S. citizen canonized (1946)" },
+  { "id": 414, "category": "American Catholics", "body": "Which Capuchin friar of Detroit, famed for his holiness, was beatified in 2017?", "options": ["Bl. Solanus Casey","Venerable Fulton Sheen","Fr. Emil Kapaun","Servant of God Thea Bowman"], "correctIndex": 0, "citation": "Bl. Solanus Casey, beatified 2017 — Vatican.va" }
+]};
+
+/* Round 5 — The Blessed Mother (Marian devotion & mysteries) */
+const PACK5 = { "packName": "The Blessed Mother", "questions": [
+  { "id": 501, "category": "The Blessed Mother", "body": "The prayer beginning 'Hail Mary, full of grace' opens with words spoken by which angel?", "options": ["Michael","Gabriel","Raphael","Uriel"], "correctIndex": 1, "citation": "Luke 1:28 (the Annunciation)" },
+  { "id": 502, "category": "The Blessed Mother", "body": "At which event did Mary tell the servants, 'Do whatever he tells you'?", "options": ["The Last Supper","The Wedding at Cana","Pentecost","The Visitation"], "correctIndex": 1, "citation": "John 2:5 (Wedding at Cana)" },
+  { "id": 503, "category": "The Blessed Mother", "body": "Mary appeared to St. Bernadette in 1858 in which town?", "options": ["Fatima","Lourdes","Knock","Guadalupe"], "correctIndex": 1, "citation": "Our Lady of Lourdes, 1858 — Vatican.va" },
+  { "id": 504, "category": "The Blessed Mother", "body": "In 1917 Mary appeared to three shepherd children at Fatima, in which country?", "options": ["Spain","Italy","Portugal","France"], "correctIndex": 2, "citation": "Our Lady of Fatima, 1917 — Vatican.va" },
+  { "id": 505, "category": "The Blessed Mother", "body": "Our Lady of Guadalupe appeared in 1531 to which saint?", "options": ["St. Juan Diego","St. Martin de Porres","St. Rose of Lima","St. Toribio"], "correctIndex": 0, "citation": "St. Juan Diego, 1531 — EWTN" },
+  { "id": 506, "category": "The Blessed Mother", "body": "By tradition, the Rosary is especially associated with which saint and his order?", "options": ["St. Francis","St. Dominic","St. Ignatius","St. Benedict"], "correctIndex": 1, "citation": "St. Dominic & the Dominicans — EWTN, the Rosary" },
+  { "id": 507, "category": "The Blessed Mother", "body": "How many Hail Marys are prayed in a single decade of the Rosary?", "options": ["Five","Seven","Ten","Twelve"], "correctIndex": 2, "citation": "Structure of the Rosary — USCCB" },
+  { "id": 508, "category": "The Blessed Mother", "body": "The dogma that Mary was conceived free from original sin is called the?", "options": ["Assumption","Immaculate Conception","Visitation","Annunciation"], "correctIndex": 1, "citation": "CCC ¶491; Bl. Pius IX, Ineffabilis Deus (1854)" },
+  { "id": 509, "category": "The Blessed Mother", "body": "Which feast (Aug 15) celebrates Mary being taken body and soul into heaven?", "options": ["The Nativity of Mary","The Assumption","The Presentation","The Coronation"], "correctIndex": 1, "citation": "CCC ¶966; Pius XII, Munificentissimus Deus (1950)" },
+  { "id": 510, "category": "The Blessed Mother", "body": "The title 'Theotokos' (God-bearer), affirmed at the Council of Ephesus (431), means Mary is the?", "options": ["Queen of Angels","Mother of God","Ark of the Covenant","Star of the Sea"], "correctIndex": 1, "citation": "Council of Ephesus, A.D. 431 — New Advent" },
+  { "id": 511, "category": "The Blessed Mother", "body": "Mary's canticle of praise beginning 'My soul magnifies the Lord' is called the?", "options": ["Benedictus","Magnificat","Te Deum","Nunc Dimittis"], "correctIndex": 1, "citation": "Luke 1:46–55 (the Magnificat)" },
+  { "id": 512, "category": "The Blessed Mother", "body": "How many mysteries did St. John Paul II add to the Rosary in 2002 (the Luminous Mysteries)?", "options": ["Three","Five","Seven","Ten"], "correctIndex": 1, "citation": "Luminous Mysteries — Rosarium Virginis Mariae (2002), Vatican.va" },
+  { "id": 513, "category": "The Blessed Mother", "body": "What is the opening word of the Latin 'Hail Mary' (Ave Maria)?", "options": ["Ave","Pater","Gloria","Credo"], "correctIndex": 0, "citation": "'Ave Maria' — cf. Luke 1:28" },
+  { "id": 514, "category": "The Blessed Mother", "body": "Which color is most traditionally associated with the Blessed Virgin Mary?", "options": ["Red","Blue","Green","Black"], "correctIndex": 1, "citation": "Marian blue — Catholic artistic tradition, EWTN" },
+  { "id": 515, "category": "The Blessed Mother", "body": "The 'Memorare' is a traditional prayer asking for whose intercession?", "options": ["St. Joseph","The Blessed Virgin Mary","St. Michael","The Holy Spirit"], "correctIndex": 1, "citation": "The Memorare — prayer to Our Lady, EWTN" }
+]};
+
+/* Multi-round campaign config */
+const ROUNDS = [
+  { name: 'Catholic Trivia',        subtitle: 'The classics',          icon: '✝',  pack: PACK,  count: 10, breakAt: 5, breakType: 'wheel' },
+  { name: 'Bible Stories',          subtitle: 'Noah, Jonah & more',    icon: '📖', pack: PACK2, count: 8,  breakAt: 4, breakType: 'manna' },
+  { name: 'The Chosen — Season 1',  subtitle: 'Binge-worthy trivia',   icon: '🎬', pack: PACK3, count: 8,  breakAt: 4, breakType: 'wheel' },
+  { name: 'American Catholics',     subtitle: 'Saints & celebrities of the New World', icon: '🇺🇸', pack: PACK4, count: 10, breakAt: 5, breakType: 'match3' },
+  { name: 'The Blessed Mother',     subtitle: 'Marian devotion & mysteries', icon: '🌹', pack: PACK5, count: 10, breakAt: 5, breakType: 'marymatch3' },
+];
+
+/* =========================================================================
+   BONUS WHEEL config — 9 slots incl. loose $200, BINGO ($2,000),
+   and the special ☕ Holy Coffee result
+   ========================================================================= */
+const WHEEL = [
+  { label: '$500',   cents: 50_000,  color: '#c9414b', text: '#fff',    weight: 3 },
+  { label: '$1,000', cents: 100_000, color: '#23232b', text: '#fff',    weight: 2 },
+  { label: '$200',   cents: 20_000,  color: '#e07a86', text: '#2a0a0e', weight: 4 },
+  { label: 'BINGO',  cents: 200_000, color: '#FFCE45', text: '#1a1400', weight: 1, jackpot: true },
+  { label: '$300',   cents: 30_000,  color: '#23232b', text: '#fff',    weight: 3 },
+  { label: '☕',      cents: 15_000,  color: '#6f4a2f', text: '#ffe9c7', weight: 2, coffee: true },
+  { label: '$750',   cents: 75_000,  color: '#c9414b', text: '#fff',    weight: 2 },
+  { label: '$100',   cents: 10_000,  color: '#e07a86', text: '#2a0a0e', weight: 4 },
+  { label: '$400',   cents: 40_000,  color: '#23232b', text: '#fff',    weight: 3 },
+];
+const SEG = WHEEL.length, SEG_DEG = 360 / SEG;
+
+/* =========================================================================
+   UI CONTROLLER
+   ========================================================================= */
+const screens = {
+  home: document.getElementById('screenHome'),
+  roundintro: document.getElementById('screenRoundIntro'),
+  preroll: document.getElementById('screenPreroll'),
+  play: document.getElementById('screenPlay'),
+  bonus: document.getElementById('screenBonus'),
+  manna: document.getElementById('screenManna'),
+  match3: document.getElementById('screenMatch3'),
+  marymatch3: document.getElementById('screenMaryMatch3'),
+  nextround: document.getElementById('screenNextRound'),
+  results: document.getElementById('screenResults'),
+};
+const el = {
+  bankbar: document.getElementById('bankbar'),
+  bankPill: document.getElementById('bankPill'),
+  bankVal: document.getElementById('bankVal'),
+  floatDelta: document.getElementById('floatDelta'),
+  prerollQ: document.getElementById('prerollQ'),
+  prerollCat: document.getElementById('prerollCat'),
+  prerollCount: document.getElementById('prerollCount'),
+  catChip: document.getElementById('catChip'),
+  qProg: document.getElementById('qProg'),
+  meterValue: document.getElementById('meterValue'),
+  barFill: document.getElementById('barFill'),
+  questionBody: document.getElementById('questionBody'),
+  optionsGrid: document.getElementById('optionsGrid'),
+  revealBox: document.getElementById('revealBox'),
+  playPanel: document.getElementById('screenPlay'),
+  // round intro
+  riIcon: document.getElementById('riIcon'),
+  riNum: document.getElementById('riNum'),
+  riName: document.getElementById('riName'),
+  riSub: document.getElementById('riSub'),
+  riMeta: document.getElementById('riMeta'),
+  beginRoundBtn: document.getElementById('beginRoundBtn'),
+  // next round
+  nrTitle: document.getElementById('nrTitle'),
+  nrBank: document.getElementById('nrBank'),
+  nrQuip: document.getElementById('nrQuip'),
+  // wheel
+  wheelSpin: document.getElementById('wheelSpin'),
+  wheelResult: document.getElementById('wheelResult'),
+  spinBtn: document.getElementById('spinBtn'),
+  // manna
+  mannaField: document.getElementById('mannaField'),
+  mannaTimer: document.getElementById('mannaTimer'),
+  mannaCount: document.getElementById('mannaCount'),
+  basketFill: document.getElementById('basketFill'),
+  mannaResult: document.getElementById('mannaResult'),
+  mannaBtn: document.getElementById('mannaBtn'),
+  // match-3
+  match3Board: document.getElementById('match3Board'),
+  match3Moves: document.getElementById('match3Moves'),
+  match3Score: document.getElementById('match3Score'),
+  match3Result: document.getElementById('match3Result'),
+  match3Btn: document.getElementById('match3Btn'),
+  // Mother Mary match-3 (3 tiers)
+  maryBoard: document.getElementById('maryBoard'),
+  maryBanner: document.getElementById('maryBanner'),
+  maryTier: document.getElementById('maryTier'),
+  maryMoves: document.getElementById('maryMoves'),
+  maryGoal: document.getElementById('maryGoal'),
+  maryResult: document.getElementById('maryResult'),
+  maryBtn: document.getElementById('maryBtn'),
+  // easter eggs
+  sneezeOverlay: document.getElementById('sneezeOverlay'),
+  sneezeSparkles: document.getElementById('sneezeSparkles'),
+  sneezeAmt: document.getElementById('sneezeAmt'),
+  coffeeOverlay: document.getElementById('coffeeOverlay'),
+  hcSteam: document.getElementById('hcSteam'),
+  hcOverflow: document.getElementById('hcOverflow'),
+  hcAmt: document.getElementById('hcAmt'),
+  angelOverlay: document.getElementById('angelOverlay'),
+  // results
+  resHero: document.getElementById('resHero'),
+  resEmoji: document.getElementById('resEmoji'),
+  finalBank: document.getElementById('finalBank'),
+  resHeadline: document.getElementById('resHeadline'),
+  resStats: document.getElementById('resStats'),
+  resList: document.getElementById('resList'),
+};
+
+// game session spans all rounds
+let game = { bank: 0, roundIndex: 0, log: [] };
+let engine = null, renderTimer = null, timeoutTimer = null, advanceTimer = null;
+let answered = false, lastTickSecond = -1, wheelRotation = 0, spinning = false;
+
+function show(name) { for (const k in screens) screens[k].classList.toggle('hidden', k !== name); }
+function updateBank() { el.bankVal.textContent = fmtCents(engine.bankCents); el.bankPill.classList.toggle('neg', engine.bankCents < 0); }
+function floatDelta(c) {
+  const f = el.floatDelta; f.textContent = fmtDelta(c);
+  f.className = 'float-delta ' + (c >= 0 ? 'pos' : 'neg');
+  void f.offsetWidth; f.classList.add('run'); setTimeout(() => f.classList.remove('run'), 1500);
+}
+
+/* ---------- Game / round lifecycle ---------- */
+function startGame() {
+  unlockAudio();
+  game = { bank: 0, roundIndex: 0, log: [] };
+  wheelRotation = 0;
+  el.bankbar.classList.remove('hidden');
+  beginRound(0);
+}
+
+function beginRound(idx) {
+  game.roundIndex = idx;
+  const rc = ROUNDS[idx];
+  engine = new RoundEngine(rc.pack.questions, rc.count, game.bank);
+  updateBank();
+  el.riIcon.textContent = rc.icon;
+  el.riNum.textContent = `Round ${idx + 1} of ${ROUNDS.length}`;
+  el.riName.textContent = rc.name;
+  el.riSub.textContent = rc.subtitle;
+  const breakLabel = rc.breakType === 'manna' ? 'Manna break at the half'
+    : rc.breakType === 'match3' ? 'Match-3 break at the half'
+    : rc.breakType === 'marymatch3' ? 'Mother Mary Match-3 (3 tiers) at the half'
+    : 'Bonus wheel at the half';
+  el.riMeta.textContent = `${rc.count} questions · ${breakLabel}`;
+  el.beginRoundBtn.textContent = idx === 0 ? 'Begin Round' : 'Bring it on';
+  show('roundintro');
+}
+
+function onRoundComplete() {
+  const rc = ROUNDS[game.roundIndex];
+  engine.log.forEach(r => { r.round = rc.name; r.roundIcon = rc.icon; game.log.push(r); });
+  game.bank = engine.bankCents;
+  if (game.roundIndex < ROUNDS.length - 1) showNextRound();
+  else showResults();
+}
+
+function nextQuestion() {
+  if (engine.idx + 1 >= engine.n) { onRoundComplete(); return; }
+  const qNext = engine.idx + 2;
+  const catNext = engine.order[engine.idx + 1].category;
+  el.prerollQ.textContent = `Question ${qNext} of ${engine.n}`;
+  el.prerollCat.textContent = catNext;
+  show('preroll');
+  let c = 3; el.prerollCount.textContent = c; sndTick();
+  const iv = setInterval(() => {
+    c--;
+    if (c <= 0) { clearInterval(iv); serveQuestion(); }
+    else { el.prerollCount.textContent = c; el.prerollCount.style.animation = 'none'; void el.prerollCount.offsetWidth; el.prerollCount.style.animation = ''; sndTick(); }
+  }, 500);
+}
+
+function serveQuestion() {
+  const now = performance.now();
+  const q = engine.serveNext(now);
+  answered = false; lastTickSecond = -1;
+  el.catChip.textContent = q.category;
+  el.qProg.textContent = `Q${engine.questionNumber} / ${engine.n}`;
+  el.questionBody.textContent = q.body;
+  el.revealBox.innerHTML = '';
+  el.playPanel.classList.remove('flashG', 'flashR');
+  el.meterValue.classList.remove('frozen');
+  el.optionsGrid.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = `<span class="key">${i + 1}</span><span>${opt}</span>`;
+    b.addEventListener('click', () => onAnswer(i));
+    el.optionsGrid.appendChild(b);
+  });
+  show('play');
+  renderMeter();
+  renderTimer = setInterval(renderMeter, 100);
+  timeoutTimer = setTimeout(onTimeout, TIMEOUT_MS);
+}
+
+function renderMeter() {
+  const now = performance.now();
+  const value = engine.currentValueCents(now);
+  el.meterValue.textContent = fmtCents(value);
+  const low = value <= 0;
+  el.meterValue.classList.toggle('low', low);
+  el.meterValue.classList.toggle('flicker', value === 0);   // flicker at $0.00
+  el.barFill.style.width = Math.max(0, Math.min(100, value / START_CENTS * 100)) + '%';
+  el.barFill.classList.toggle('low', low);
+  const elapsed = now - engine.servedAt;
+  const sec = Math.floor(elapsed / 1000);
+  if (sec !== lastTickSecond && sec >= 1 && value > FLOOR_CENTS) { lastTickSecond = sec; sndTick(); }
+}
+
+function stopTimers() { clearInterval(renderTimer); renderTimer = null; clearTimeout(timeoutTimer); timeoutTimer = null; }
+
+function onAnswer(chosenIndex) {
+  if (answered) return; answered = true; stopTimers();
+  reveal(engine.submitAnswer(chosenIndex, performance.now()), chosenIndex);
+}
+function onTimeout() {
+  if (answered) return; answered = true; stopTimers();
+  reveal(engine.timeout(performance.now()), -1);
+}
+
+function reveal(result, chosenIndex) {
+  el.meterValue.classList.remove('flicker');
+  el.meterValue.classList.add('frozen');
+  el.optionsGrid.querySelectorAll('.opt').forEach((b, i) => {
+    b.disabled = true;
+    if (i === result.correctIndex) b.classList.add('correct');
+    else if (i === chosenIndex) b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  if (result.wasCorrect) { el.playPanel.classList.add('flashG'); sndCorrect(); applause(); }
+  else { el.playPanel.classList.add('flashR'); sndWrong(); }
+  updateBank();
+  if (result.deltaCents !== 0) floatDelta(result.deltaCents);   // no float on a $0 (safe) miss
+
+  const secs = (result.elapsedMs / 1000).toFixed(1);
+  let label;
+  if (result.wasCorrect) {
+    label = 'Correct!';
+  } else if (result.deltaCents === 0) {
+    // wrong but answered before the value hit $0 → no penalty
+    label = 'Wrong — but no penalty (you beat the clock)';
+  } else {
+    label = result.timedOut ? 'Timed out' : 'Wrong — clock hit zero';
+  }
+  // Bank change is shown only once now — the floating +/− near the bank pill (top);
+  // the reveal keeps the verdict + timing + citation, no duplicate dollar figure.
+  el.revealBox.innerHTML = `<div class="cite">${label} · ${secs}s · ${result.citation}</div>`;
+
+  // Time-out gag: the guardian angel dozed off. Give the advance extra time to let it play.
+  if (result.timedOut) triggerAngel();
+
+  advanceTimer = setTimeout(() => {
+    el.meterValue.classList.remove('frozen');
+    const rc = ROUNDS[game.roundIndex];
+    if (engine.questionNumber === rc.breakAt && !engine.breakDone) showBreak(rc.breakType);
+    else nextQuestion();
+  }, result.timedOut ? 3800 : 2500);
+}
+
+function showBreak(type) {
+  if (type === 'manna') showManna();
+  else if (type === 'match3') showMatch3();
+  else if (type === 'marymatch3') showMaryMatch3();
+  else showBonusWheel();
+}
+
+/* ---------- Bonus wheel ---------- */
+function buildWheel() {
+  const cx = 150, cy = 150, r = 148;
+  let svg = '';
+  WHEEL.forEach((seg, i) => {
+    const a0 = i * SEG_DEG, a1 = a0 + SEG_DEG;
+    const p0 = polar(cx, cy, r, a0), p1 = polar(cx, cy, r, a1);
+    svg += `<path d="M${cx} ${cy} L${p0.x.toFixed(2)} ${p0.y.toFixed(2)} A${r} ${r} 0 0 1 ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} Z" fill="${seg.color}" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>`;
+    const mid = a0 + SEG_DEG / 2;
+    const lp = polar(cx, cy, r * 0.62, mid);
+    svg += `<text x="${lp.x.toFixed(2)}" y="${lp.y.toFixed(2)}" fill="${seg.text}" font-family="ui-rounded,'SF Pro Rounded',system-ui,sans-serif" font-size="${seg.jackpot ? 20 : 18}" font-weight="800" text-anchor="middle" dominant-baseline="central" transform="rotate(${mid.toFixed(2)} ${lp.x.toFixed(2)} ${lp.y.toFixed(2)})">${seg.label}</text>`;
+  });
+  el.wheelSpin.innerHTML = svg;
+}
+function polar(cx, cy, r, angDegFromTop) {
+  const t = (angDegFromTop - 90) * Math.PI / 180; // 0 = top
+  return { x: cx + r * Math.cos(t), y: cy + r * Math.sin(t) };
+}
+function pickSegment() {
+  const total = WHEEL.reduce((s, w) => s + w.weight, 0);
+  let roll = Math.random() * total;
+  for (let i = 0; i < WHEEL.length; i++) { roll -= WHEEL[i].weight; if (roll <= 0) return i; }
+  return WHEEL.length - 1;
+}
+function showBonusWheel() {
+  el.wheelResult.innerHTML = '';
+  el.spinBtn.disabled = false;
+  el.spinBtn.textContent = 'Spin';
+  el.spinBtn.onclick = spinWheel;   // reset handler cleanly each time the wheel opens
+  spinning = false;
+  show('bonus');
+}
+function spinWheel() {
+  if (spinning) return; spinning = true;
+  el.spinBtn.disabled = true;
+  const i = pickSegment();
+  const seg = WHEEL[i];
+  const mid = i * SEG_DEG + SEG_DEG / 2;           // segment center, clockwise from top
+  const jitter = (Math.random() * 2 - 1) * (SEG_DEG * 0.35);
+  const targetMod = ((-(mid) + jitter) % 360 + 360) % 360; // rotation that lands mid under top pointer
+  let final = wheelRotation - (wheelRotation % 360) + targetMod;
+  while (final < wheelRotation + 360 * 5) final += 360;
+  wheelRotation = final;
+  el.wheelSpin.style.transform = `rotate(${final}deg)`;
+  // tick sounds during spin
+  let ticks = 0; const tickIv = setInterval(() => { sndTick(); if (++ticks > 22) clearInterval(tickIv); }, 170);
+  const enableContinue = () => {
+    el.spinBtn.textContent = 'Continue';
+    el.spinBtn.disabled = false;
+    el.spinBtn.onclick = () => { el.spinBtn.onclick = spinWheel; nextQuestion(); };
+  };
+  const finish = () => {
+    clearInterval(tickIv);
+    engine.awardBonus(seg.cents, seg.coffee ? '☕ Holy Coffee' : seg.label, seg.coffee ? 'Coffee' : 'Bonus Spin');
+    updateBank(); floatDelta(seg.cents);
+    spinning = false;
+
+    // ☕ Holy Coffee — special wheel outcome
+    if (seg.coffee) {
+      sndPour(); sndAhh();
+      el.wheelResult.innerHTML = `<div class="r-amt norm">☕ Holy Coffee!</div><div class="r-sub">A blessed cup — ${fmtDelta(seg.cents)} added</div>`;
+      el.spinBtn.disabled = true;
+      triggerCoffee(seg.cents, enableContinue);
+      return;
+    }
+
+    if (seg.jackpot) { sndJackpot(); applause(); } else { sndCorrect(); }
+    const cls = seg.jackpot ? 'jackpot' : 'norm';
+    const headline = seg.jackpot ? 'BINGO!' : fmtDelta(seg.cents);
+    const sub = seg.jackpot ? `Jackpot — ${fmtCents(seg.cents)} added to your bank!` : `Added to your bank`;
+    el.wheelResult.innerHTML = `<div class="r-amt ${cls}">${headline}</div><div class="r-sub">${sub}</div>`;
+
+    // 🤧 Saintly Sneeze — rare random blessing after a (non-jackpot) spin
+    if (!seg.jackpot && Math.random() < SNEEZE_CHANCE) {
+      el.spinBtn.disabled = true;
+      triggerSneeze(enableContinue);
+    } else {
+      enableContinue();
+    }
+  };
+  el.wheelSpin.addEventListener('transitionend', finish, { once: true });
+  setTimeout(() => { if (spinning) finish(); }, 4600); // fallback
+}
+
+/* ---------- Easter eggs: Saintly Sneeze & Holy Coffee ---------- */
+const SNEEZE_CHANCE = 0.5;    // chance of a sneeze blessing after a non-jackpot spin (tunable)
+const SNEEZE_BONUS  = 7_500;  // $75 manna bonus
+
+function triggerSneeze(done) {
+  const ov = el.sneezeOverlay;
+  ov.classList.remove('show', 'achoo');
+  const sp = el.sneezeSparkles; sp.innerHTML = '';
+  const marks = ['✨','🌟','💫','🌼','⭐'];
+  for (let i = 0; i < 12; i++) {
+    const s = document.createElement('div'); s.className = 'spark';
+    s.textContent = marks[i % marks.length];
+    const ang = (i / 12) * Math.PI * 2, dist = 70 + Math.random() * 80;
+    s.style.setProperty('--tx', (Math.cos(ang) * dist).toFixed(0) + 'px');
+    s.style.setProperty('--ty', (Math.sin(ang) * dist - 20).toFixed(0) + 'px');
+    s.style.setProperty('--rot', (Math.random() * 360 - 180).toFixed(0) + 'deg');
+    s.style.animationDelay = (Math.random() * 0.12).toFixed(2) + 's';
+    sp.appendChild(s);
+  }
+  el.sneezeAmt.textContent = fmtDelta(SNEEZE_BONUS);
+  ov.classList.remove('hidden');
+  void ov.offsetWidth;
+  ov.classList.add('show');
+  setTimeout(() => { sndAchoo(); ov.classList.add('achoo'); }, 850);
+  setTimeout(() => { sndChoir(); }, 1200);
+  setTimeout(() => { engine.awardBonus(SNEEZE_BONUS, 'Bless you!', 'Sneeze'); updateBank(); floatDelta(SNEEZE_BONUS); }, 1250);
+  setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show', 'achoo'); if (done) done(); }, 2900);
+}
+
+function triggerCoffee(cents, done) {
+  const ov = el.coffeeOverlay;
+  ov.classList.remove('show');
+  const st = el.hcSteam; st.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const p = document.createElement('div'); p.className = 'hc-puff';
+    p.textContent = '💨';
+    p.style.left = ((i - 2) * 16) + 'px';
+    p.style.setProperty('--sx', (Math.random() * 40 - 20).toFixed(0) + 'px');
+    p.style.animationDelay = (i * 0.3 + Math.random() * 0.2).toFixed(2) + 's';
+    st.appendChild(p);
+  }
+  const of = el.hcOverflow; of.innerHTML = '';
+  const drops = ['✨','🟡','🍯','🌟'];
+  for (let i = 0; i < 10; i++) {
+    const d = document.createElement('div'); d.className = 'drip';
+    d.textContent = drops[i % drops.length];
+    d.style.setProperty('--dx', (Math.random() * 120 - 60).toFixed(0) + 'px');
+    d.style.animationDelay = (0.3 + Math.random() * 0.8).toFixed(2) + 's';
+    of.appendChild(d);
+  }
+  el.hcAmt.textContent = fmtDelta(cents);
+  ov.classList.remove('hidden');
+  void ov.offsetWidth;
+  ov.classList.add('show');
+  setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show'); if (done) done(); }, 3200);
+}
+
+// The Sleeping Angel — plays when the clock runs out (a gentle gag).
+function triggerAngel(done) {
+  const ov = el.angelOverlay;
+  const glass = document.getElementById('angelGlass');
+  ov.classList.remove('show', 'wake');
+  glass.textContent = '⏳';
+  ov.classList.remove('hidden');
+  void ov.offsetWidth;
+  ov.classList.add('show');
+  sndSnore();
+  setTimeout(sndSnore, 800);
+  setTimeout(() => {                       // hourglass empties → angel wakes with a start
+    ov.classList.add('wake');
+    glass.textContent = '⌛';
+    tone(520, 0.08, 'triangle', 0.06, 0);  // startled little gasp
+    tone(780, 0.10, 'triangle', 0.06, 0.09);
+  }, 1600);
+  setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show', 'wake'); if (done) done(); }, 3400);
+}
+
+/* ---------- Manna reaction game ---------- */
+const MANNA_TARGET = 10;
+let mannaActive = false, mannaCount = 0, mannaStart = 0, mannaSpawnIv = null, mannaRaf = null;
+
+function mannaReward(seconds) {
+  if (seconds <= 5) return 20_000;          // under 5s → $200
+  if (seconds >= 20) return 5_000;          // 20s+ → $50
+  const dollars = 200 - 10 * (seconds - 5); // linear between
+  return Math.round(dollars / 5) * 5 * 100; // round to nearest $5, in cents
+}
+function clearFlakes() { el.mannaField.querySelectorAll('.flake').forEach(f => f.remove()); }
+function updateBasket() {
+  el.mannaCount.textContent = `${mannaCount} / ${MANNA_TARGET}`;
+  el.basketFill.style.width = (mannaCount / MANNA_TARGET * 100) + '%';
+}
+function showManna() {
+  mannaActive = false;
+  mannaCount = 0;
+  updateBasket();
+  clearFlakes();
+  el.mannaTimer.textContent = '0.0s';
+  el.mannaResult.innerHTML = '';
+  el.mannaBtn.textContent = 'Start Collecting';
+  el.mannaBtn.disabled = false;
+  el.mannaBtn.onclick = beginManna;
+  show('manna');
+}
+function beginManna() {
+  if (mannaActive) return;
+  mannaActive = true;
+  mannaCount = 0; updateBasket();
+  el.mannaResult.innerHTML = '';
+  el.mannaBtn.disabled = true;
+  el.mannaBtn.textContent = 'Collecting…';
+  mannaStart = performance.now();
+  spawnFlake();
+  mannaSpawnIv = setInterval(spawnFlake, 460);
+  mannaRaf = requestAnimationFrame(tickManna);
+}
+function spawnFlake() {
+  if (!mannaActive) return;
+  const f = document.createElement('div');
+  f.className = 'flake';
+  f.textContent = '🍞';
+  f.style.left = (8 + Math.random() * 84) + '%';
+  f.style.animationDuration = (2.2 + Math.random() * 1.0) + 's';
+  f.addEventListener('pointerdown', (e) => { e.preventDefault(); collectFlake(f); });
+  f.addEventListener('animationend', () => f.remove());
+  el.mannaField.appendChild(f);
+}
+function collectFlake(f) {
+  if (f.dataset.done) return;
+  f.dataset.done = '1';
+  f.remove();
+  mannaCount++;
+  updateBasket();
+  sndTick();
+  if (mannaCount >= MANNA_TARGET) finishManna();
+}
+function tickManna() {
+  if (!mannaActive) return;
+  el.mannaTimer.textContent = ((performance.now() - mannaStart) / 1000).toFixed(1) + 's';
+  mannaRaf = requestAnimationFrame(tickManna);
+}
+function finishManna() {
+  mannaActive = false;
+  clearInterval(mannaSpawnIv); mannaSpawnIv = null;
+  cancelAnimationFrame(mannaRaf); mannaRaf = null;
+  clearFlakes();
+  const seconds = (performance.now() - mannaStart) / 1000;
+  el.mannaTimer.textContent = seconds.toFixed(1) + 's';
+  const reward = mannaReward(seconds);
+  engine.awardBonus(reward, seconds.toFixed(1) + 's', 'Manna');
+  updateBank(); floatDelta(reward);
+  const fast = reward >= 20_000;
+  if (fast) { sndJackpot(); applause(); } else { sndCorrect(); }
+  el.mannaResult.innerHTML = `<div class="r-amt ${fast ? 'fast' : ''}">${fmtDelta(reward)}</div><div class="r-sub">Full basket in ${seconds.toFixed(1)}s${fast ? ' — lightning hands!' : ''}</div>`;
+  el.mannaBtn.textContent = 'Continue';
+  el.mannaBtn.disabled = false;
+  el.mannaBtn.onclick = () => { el.mannaBtn.onclick = beginManna; nextQuestion(); };
+}
+
+/* ---------- Match-3 mini-game (Gifts from Heaven) ----------
+   Pure helpers (makeBoard/findMatches/collapse/swapWouldMatch/hasPossibleMove/
+   match3Reward) are DOM-free and self-tested. The board is a flat array of
+   symbol indices; null marks a cell mid-clear. */
+const M3_COLS = 6, M3_ROWS = 7;
+const M3_SYMBOLS = ['🐟','🍞','✝️','🍇','🕊️','🔥'];
+const M3_MOVES = 15;
+const m3at = (r, c) => r * M3_COLS + c;
+const m3rand = () => Math.floor(Math.random() * M3_SYMBOLS.length);
+
+function makeBoard() {
+  const b = new Array(M3_ROWS * M3_COLS);
+  for (let r = 0; r < M3_ROWS; r++) for (let c = 0; c < M3_COLS; c++) {
+    let t, guard = 0;
+    do { t = m3rand(); guard++; }
+    while (guard < 60 && (
+      (c >= 2 && b[m3at(r, c - 1)] === t && b[m3at(r, c - 2)] === t) ||   // would make horizontal 3
+      (r >= 2 && b[m3at(r - 1, c)] === t && b[m3at(r - 2, c)] === t)      // would make vertical 3
+    ));
+    b[m3at(r, c)] = t;
+  }
+  return b;
+}
+
+function findMatches(b) {
+  const cleared = new Set();
+  for (let r = 0; r < M3_ROWS; r++) {                 // horizontal runs
+    let start = 0;
+    for (let c = 1; c <= M3_COLS; c++) {
+      const same = c < M3_COLS && b[m3at(r, c)] !== null && b[m3at(r, c)] === b[m3at(r, c - 1)];
+      if (!same) { if (c - start >= 3) for (let k = start; k < c; k++) cleared.add(m3at(r, k)); start = c; }
+    }
+  }
+  for (let c = 0; c < M3_COLS; c++) {                 // vertical runs
+    let start = 0;
+    for (let r = 1; r <= M3_ROWS; r++) {
+      const same = r < M3_ROWS && b[m3at(r, c)] !== null && b[m3at(r, c)] === b[m3at(r - 1, c)];
+      if (!same) { if (r - start >= 3) for (let k = start; k < r; k++) cleared.add(m3at(k, c)); start = r; }
+    }
+  }
+  return cleared;
+}
+
+function collapse(b) {                                // gravity: survivors fall, tops refill
+  for (let c = 0; c < M3_COLS; c++) {
+    let write = M3_ROWS - 1;
+    for (let r = M3_ROWS - 1; r >= 0; r--) {
+      if (b[m3at(r, c)] !== null) { b[m3at(write, c)] = b[m3at(r, c)]; if (write !== r) b[m3at(r, c)] = null; write--; }
+    }
+    for (let r = write; r >= 0; r--) b[m3at(r, c)] = m3rand();
+  }
+  return b;
+}
+
+function swapWouldMatch(b, i, j) {
+  const c = b.slice(); [c[i], c[j]] = [c[j], c[i]];
+  return findMatches(c).size > 0;
+}
+
+function hasPossibleMove(b) {
+  for (let r = 0; r < M3_ROWS; r++) for (let c = 0; c < M3_COLS; c++) {
+    if (c + 1 < M3_COLS && swapWouldMatch(b, m3at(r, c), m3at(r, c + 1))) return true;
+    if (r + 1 < M3_ROWS && swapWouldMatch(b, m3at(r, c), m3at(r + 1, c))) return true;
+  }
+  return false;
+}
+
+function match3Reward(cleared) {                      // cleared-tile count -> cents, $50–$200 band
+  if (cleared >= 40) return 20_000;                   // cap  $200
+  if (cleared <= 10) return 5_000;                    // floor $50
+  const dollars = 50 + (cleared - 10) * 5;            // linear 10→40 tiles ⇒ $50→$200
+  return Math.round(dollars / 5) * 5 * 100;
+}
+
+let match3Alive = false, match3Resolving = false, match3Started = false, match3Done = false;
+let match3Moves = 0, match3Cleared = 0, match3BigClear = 0, match3Sel = -1;
+let board = null;      // values (symbol indices), null while clearing
+let boardEls = null;   // parallel array of persistent DOM tile nodes (identity moves between slots)
+const m3delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+function m3Geom() {
+  const w = el.match3Board.clientWidth, h = el.match3Board.clientHeight || w * M3_ROWS / M3_COLS;
+  const size = Math.floor(Math.min(w / M3_COLS, h / M3_ROWS));
+  return { size, ox: Math.round((w - size * M3_COLS) / 2), oy: Math.round((h - size * M3_ROWS) / 2) };
+}
+function clearMatch3() { el.match3Board.querySelectorAll('.m3tile').forEach(t => t.remove()); boardEls = null; }
+
+function m3NewTile(v) {
+  const t = document.createElement('div');
+  t.className = 'm3tile';
+  t.textContent = M3_SYMBOLS[v];
+  t.addEventListener('pointerdown', (e) => { e.preventDefault(); const idx = boardEls.indexOf(t); if (idx >= 0) onTileTap(idx); });
+  el.match3Board.appendChild(t);
+  return t;
+}
+function m3SizeTile(t, g) { t.style.width = t.style.height = g.size + 'px'; t.style.fontSize = Math.round(g.size * 0.58) + 'px'; }
+function m3PosTile(t, r, c, g) { t.style.setProperty('--pos', `translate(${g.ox + c * g.size}px, ${g.oy + r * g.size}px)`); }
+
+// Reposition every tile to its current slot (transition animates the move/fall).
+function m3RenderAll() {
+  const g = m3Geom();
+  for (let i = 0; i < boardEls.length; i++) {
+    const t = boardEls[i]; if (!t) continue;
+    m3SizeTile(t, g);
+    m3PosTile(t, Math.floor(i / M3_COLS), i % M3_COLS, g);
+    t.classList.toggle('sel', i === match3Sel);
+  }
+}
+
+// DOM gravity: move survivor values+nodes down, spawn refills stacked above the field.
+function m3CollapseDOM() {
+  const g = m3Geom();
+  for (let c = 0; c < M3_COLS; c++) {
+    let write = M3_ROWS - 1;
+    for (let r = M3_ROWS - 1; r >= 0; r--) {
+      const i = m3at(r, c);
+      if (board[i] !== null && board[i] !== undefined) {
+        const w = m3at(write, c);
+        if (w !== i) { board[w] = board[i]; boardEls[w] = boardEls[i]; board[i] = null; boardEls[i] = null; }
+        write--;
+      }
+    }
+    for (let r = write; r >= 0; r--) {           // fill empty top slots with new tiles
+      const i = m3at(r, c);
+      board[i] = m3rand();
+      const t = m3NewTile(board[i]); m3SizeTile(t, g);
+      // start above the field, stacked in order, so they "fall from heaven"
+      t.style.setProperty('--pos', `translate(${g.ox + c * g.size}px, ${g.oy + (r - (write + 1)) * g.size}px)`);
+      boardEls[i] = t;
+    }
+  }
+  void el.match3Board.offsetWidth; // flush start positions before m3RenderAll transitions them down
+}
+
+function showMatch3() {
+  match3Alive = false; match3Resolving = false; match3Started = false; match3Done = false;
+  match3Moves = M3_MOVES; match3Cleared = 0; match3BigClear = 0; match3Sel = -1; board = null;
+  clearMatch3();
+  el.match3Moves.textContent = M3_MOVES;
+  el.match3Score.textContent = '0';
+  el.match3Result.innerHTML = '';
+  el.match3Btn.textContent = 'Start Matching';
+  el.match3Btn.disabled = false;
+  el.match3Btn.onclick = beginMatch3;
+  show('match3');
+}
+
+function beginMatch3() {
+  if (match3Started) return;
+  match3Started = true; match3Alive = true;
+  match3Moves = M3_MOVES; match3Cleared = 0; match3BigClear = 0; match3Sel = -1;
+  el.match3Btn.disabled = true;
+  el.match3Btn.textContent = 'Matching…';
+  el.match3Result.innerHTML = '';
+  clearMatch3();
+  // start from a board with no free matches but at least one possible move
+  do { board = makeBoard(); } while (findMatches(board).size > 0 || !hasPossibleMove(board));
+  const g = m3Geom();
+  boardEls = new Array(board.length);
+  for (let i = 0; i < board.length; i++) {
+    const r = Math.floor(i / M3_COLS), c = i % M3_COLS;
+    const t = m3NewTile(board[i]); m3SizeTile(t, g);
+    t.style.setProperty('--pos', `translate(${g.ox + c * g.size}px, ${g.oy - (M3_ROWS - r) * g.size}px)`); // above field
+    boardEls[i] = t;
+  }
+  updateMatch3Hud();
+  void el.match3Board.offsetWidth;
+  requestAnimationFrame(m3RenderAll); // intro cascade: tiles drop into place
+}
+
+function updateMatch3Hud() {
+  el.match3Moves.textContent = match3Moves;
+  el.match3Score.textContent = match3Cleared;
+}
+
+function m3Swap(a, b) { [board[a], board[b]] = [board[b], board[a]]; [boardEls[a], boardEls[b]] = [boardEls[b], boardEls[a]]; }
+
+async function onTileTap(i) {
+  if (!match3Alive || match3Resolving || match3Moves <= 0) return;
+  if (match3Sel === -1) { match3Sel = i; m3RenderAll(); return; }
+  if (match3Sel === i) { match3Sel = -1; m3RenderAll(); return; }
+  const r1 = Math.floor(match3Sel / M3_COLS), c1 = match3Sel % M3_COLS;
+  const r2 = Math.floor(i / M3_COLS), c2 = i % M3_COLS;
+  const adjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+  if (!adjacent) { match3Sel = i; m3RenderAll(); return; }   // reselect, no penalty
+
+  const a = match3Sel, b2 = i;
+  match3Sel = -1;
+  if (!swapWouldMatch(board, a, b2)) {
+    // revert: animate over and back, no move spent
+    match3Resolving = true;
+    m3Swap(a, b2); m3RenderAll(); sndTick();
+    await m3delay(230); if (!match3Alive) return;
+    m3Swap(a, b2); m3RenderAll();
+    await m3delay(230); if (!match3Alive) return;
+    match3Resolving = false;
+    return;
+  }
+  // committed swap
+  match3Resolving = true;
+  match3Moves--;
+  m3Swap(a, b2); m3RenderAll(); sndTick();
+  updateMatch3Hud();
+  await m3delay(210); if (!match3Alive) return;
+  await resolveBoard();
+  if (!match3Alive) return;
+
+  // deadlock guard — reshuffle if no move left on the board (does not cost a move)
+  if (match3Moves > 0 && !hasPossibleMove(board)) {
+    el.match3Result.innerHTML = `<div class="r-sub">No moves — shuffling from heaven…</div>`;
+    reshuffleBoardDOM();
+    m3RenderAll();
+    await m3delay(300); if (!match3Alive) return;
+    el.match3Result.innerHTML = '';
+  }
+  match3Resolving = false;
+  if (match3Moves <= 0) finishMatch3();
+}
+
+// Reshuffle the existing tiles in place (keeps nodes, reassigns which value/slot each holds).
+function reshuffleBoardDOM() {
+  let order;
+  do {
+    order = shuffle(board.map((_, i) => i));
+    // apply permutation to a trial value array to test validity
+    var trial = new Array(board.length);
+    for (let k = 0; k < order.length; k++) trial[k] = board[order[k]];
+  } while (findMatches(trial).size > 0 || !hasPossibleMove(trial));
+  const newVals = new Array(board.length), newEls = new Array(board.length);
+  for (let k = 0; k < order.length; k++) { newVals[k] = board[order[k]]; newEls[k] = boardEls[order[k]]; }
+  board = newVals; boardEls = newEls;
+}
+
+async function resolveBoard() {
+  let chain = 0;
+  while (true) {
+    const m = findMatches(board);
+    if (m.size === 0) break;
+    chain++;
+    match3Cleared += m.size;
+    match3BigClear = Math.max(match3BigClear, m.size);
+    updateMatch3Hud();
+    (chain >= 3) ? sndCorrect() : sndTick();
+    // animate the cleared tiles shrinking, then remove them
+    m.forEach(idx => { if (boardEls[idx]) boardEls[idx].classList.add('clearing'); });
+    await m3delay(200); if (!match3Alive) return;
+    m.forEach(idx => { if (boardEls[idx]) boardEls[idx].remove(); boardEls[idx] = null; board[idx] = null; });
+    m3CollapseDOM();
+    m3RenderAll();
+    await m3delay(240); if (!match3Alive) return;
+  }
+}
+
+function finishMatch3() {
+  if (match3Done) return;
+  match3Done = true;
+  match3Alive = false;
+  match3Sel = -1;
+  let cents = match3Reward(match3Cleared), jackpot = false;
+  if (match3BigClear >= 8) { cents = 20_000; jackpot = true; }   // big "fall from heaven" cascade → BINGO $200
+  engine.awardBonus(cents, match3Cleared + ' gifts', 'Match3');
+  updateBank(); floatDelta(cents);
+  if (jackpot) { sndJackpot(); applause(); } else { sndCorrect(); }
+  el.match3Result.innerHTML =
+    `<div class="r-amt ${jackpot ? 'fast' : ''}">${jackpot ? 'BINGO! ' + fmtDelta(cents) : fmtDelta(cents)}</div>` +
+    `<div class="r-sub">Cleared ${match3Cleared} gifts${jackpot ? ' — a heavenly cascade!' : ''}</div>`;
+  el.match3Btn.textContent = 'Continue';
+  el.match3Btn.disabled = false;
+  el.match3Btn.onclick = () => { el.match3Btn.onclick = beginMatch3; nextQuestion(); };
+}
+
+/* ---------- Mother Mary Match-3 (3 tiers) ----------
+   Reuses the pure grid helpers (makeBoard/findMatches/collapse/swapWouldMatch/
+   hasPossibleMove operate on symbol indices 0..5 on the same 6×7 grid); only the
+   rendered glyphs differ. Each tier has its own moves + clear-goal; completing a
+   tier's goal advances you. Reward scales with total cleared + tiers completed. */
+const MARY_SYMBOLS = ['🌹','👑','⭐','🕊️','💙','⚜️'];   // rose, crown, star, dove, heart, fleur-de-lis
+const MARY_TIERS = [
+  { name: 'The Annunciation',    icon: '🌹', moves: 12, goal: 15 },
+  { name: 'Queen of Heaven',     icon: '👑', moves: 14, goal: 20 },
+  { name: 'Our Lady of Victory', icon: '⭐', moves: 16, goal: 25 },
+];
+let maryAlive = false, maryResolving = false, maryStarted = false, maryDone = false;
+let maryTier = 0, maryMoves = 0, maryTierCleared = 0, maryTotalCleared = 0, maryGoalsMet = 0, marySel = -1;
+let maryBoard = null, maryEls = null;
+
+function maryReward(total, goals) {
+  let cents = 10_000 + total * 500;                 // $100 + $5 per cleared tile
+  cents = Math.max(10_000, Math.min(40_000, cents)); // clamp $100–$400
+  cents += goals * 5_000;                            // +$50 per tier goal met
+  const jackpot = goals >= MARY_TIERS.length;
+  if (jackpot) cents = Math.max(cents, 50_000);      // $500 for completing all three tiers
+  return { cents, jackpot };
+}
+
+function maryGeom() {
+  const b = el.maryBoard, w = b.clientWidth, h = b.clientHeight || w * M3_ROWS / M3_COLS;
+  const size = Math.floor(Math.min(w / M3_COLS, h / M3_ROWS));
+  return { size, ox: Math.round((w - size * M3_COLS) / 2), oy: Math.round((h - size * M3_ROWS) / 2) };
+}
+function maryClearTiles() { el.maryBoard.querySelectorAll('.m3tile').forEach(t => t.remove()); }
+function maryNewTile(v) {
+  const t = document.createElement('div');
+  t.className = 'm3tile';
+  t.textContent = MARY_SYMBOLS[v];
+  t.addEventListener('pointerdown', (e) => { e.preventDefault(); const idx = maryEls.indexOf(t); if (idx >= 0) maryTap(idx); });
+  el.maryBoard.appendChild(t);
+  return t;
+}
+function marySize(t, g) { t.style.width = t.style.height = g.size + 'px'; t.style.fontSize = Math.round(g.size * 0.58) + 'px'; }
+function maryRenderAll() {
+  const g = maryGeom();
+  for (let i = 0; i < maryEls.length; i++) {
+    const t = maryEls[i]; if (!t) continue;
+    marySize(t, g);
+    const r = Math.floor(i / M3_COLS), c = i % M3_COLS;
+    t.style.setProperty('--pos', `translate(${g.ox + c * g.size}px, ${g.oy + r * g.size}px)`);
+    t.classList.toggle('sel', i === marySel);
+  }
+}
+function maryCollapseDOM() {
+  const g = maryGeom();
+  for (let c = 0; c < M3_COLS; c++) {
+    let write = M3_ROWS - 1;
+    for (let r = M3_ROWS - 1; r >= 0; r--) {
+      const i = m3at(r, c);
+      if (maryBoard[i] !== null && maryBoard[i] !== undefined) {
+        const w = m3at(write, c);
+        if (w !== i) { maryBoard[w] = maryBoard[i]; maryEls[w] = maryEls[i]; maryBoard[i] = null; maryEls[i] = null; }
+        write--;
+      }
+    }
+    for (let r = write; r >= 0; r--) {
+      const i = m3at(r, c);
+      maryBoard[i] = m3rand();
+      const t = maryNewTile(maryBoard[i]); marySize(t, g);
+      t.style.setProperty('--pos', `translate(${g.ox + c * g.size}px, ${g.oy + (r - (write + 1)) * g.size}px)`);
+      maryEls[i] = t;
+    }
+  }
+  void el.maryBoard.offsetWidth;
+}
+function marySwap(a, b) { [maryBoard[a], maryBoard[b]] = [maryBoard[b], maryBoard[a]]; [maryEls[a], maryEls[b]] = [maryEls[b], maryEls[a]]; }
+function maryUpdateHud() {
+  el.maryTier.textContent = (maryTier + 1) + ' / ' + MARY_TIERS.length;
+  el.maryMoves.textContent = maryMoves;
+  el.maryGoal.textContent = maryTierCleared + ' / ' + MARY_TIERS[maryTier].goal;
+}
+
+function showMaryMatch3() {
+  maryAlive = false; maryResolving = false; maryStarted = false; maryDone = false;
+  maryTier = 0; maryTotalCleared = 0; maryGoalsMet = 0; marySel = -1; maryBoard = null;
+  maryClearTiles();
+  maryTierCleared = 0; maryMoves = MARY_TIERS[0].moves; maryUpdateHud();
+  el.maryResult.innerHTML = '';
+  el.maryBanner.classList.remove('show'); el.maryBanner.innerHTML = '';
+  el.maryBtn.textContent = 'Begin Tier 1';
+  el.maryBtn.disabled = false;
+  el.maryBtn.onclick = startMary;
+  show('marymatch3');
+}
+function startMary() {
+  if (maryStarted) return;
+  maryStarted = true; maryAlive = true;
+  el.maryBtn.disabled = true; el.maryBtn.textContent = 'Praying…';
+  el.maryResult.innerHTML = '';
+  beginMaryTier();
+}
+function beginMaryTier() {
+  const tier = MARY_TIERS[maryTier];
+  maryMoves = tier.moves; maryTierCleared = 0; marySel = -1;
+  maryClearTiles();
+  do { maryBoard = makeBoard(); } while (findMatches(maryBoard).size > 0 || !hasPossibleMove(maryBoard));
+  const g = maryGeom();
+  maryEls = new Array(maryBoard.length);
+  for (let i = 0; i < maryBoard.length; i++) {
+    const r = Math.floor(i / M3_COLS), c = i % M3_COLS;
+    const t = maryNewTile(maryBoard[i]); marySize(t, g);
+    t.style.setProperty('--pos', `translate(${g.ox + c * g.size}px, ${g.oy - (M3_ROWS - r) * g.size}px)`);
+    maryEls[i] = t;
+  }
+  maryUpdateHud();
+  // show the tier banner, then drop the tiles in
+  el.maryBanner.innerHTML = `<div class="mb-icon">${tier.icon}</div><div class="mb-tier">Tier ${maryTier + 1} of ${MARY_TIERS.length}</div><div class="mb-name">${esc(tier.name)}</div><div class="mb-goal">Clear ${tier.goal} to advance</div>`;
+  el.maryBanner.classList.add('show');
+  setTimeout(() => {
+    if (!maryAlive) return;
+    el.maryBanner.classList.remove('show');
+    void el.maryBoard.offsetWidth;
+    requestAnimationFrame(maryRenderAll);
+  }, 1500);
+}
+async function maryTap(i) {
+  if (!maryAlive || maryResolving || maryMoves <= 0) return;
+  if (marySel === -1) { marySel = i; maryRenderAll(); return; }
+  if (marySel === i) { marySel = -1; maryRenderAll(); return; }
+  const r1 = Math.floor(marySel / M3_COLS), c1 = marySel % M3_COLS, r2 = Math.floor(i / M3_COLS), c2 = i % M3_COLS;
+  if (Math.abs(r1 - r2) + Math.abs(c1 - c2) !== 1) { marySel = i; maryRenderAll(); return; }
+  const a = marySel, b2 = i; marySel = -1;
+  if (!swapWouldMatch(maryBoard, a, b2)) {
+    maryResolving = true;
+    marySwap(a, b2); maryRenderAll(); sndTick();
+    await m3delay(230); if (!maryAlive) return;
+    marySwap(a, b2); maryRenderAll();
+    await m3delay(230); if (!maryAlive) return;
+    maryResolving = false;
+    return;
+  }
+  maryResolving = true;
+  maryMoves--;
+  marySwap(a, b2); maryRenderAll(); sndTick(); maryUpdateHud();
+  await m3delay(210); if (!maryAlive) return;
+  await maryResolve();
+  if (!maryAlive) return;
+
+  const goal = MARY_TIERS[maryTier].goal;
+  if (maryMoves > 0 && maryTierCleared < goal && !hasPossibleMove(maryBoard)) {
+    el.maryResult.innerHTML = `<div class="r-sub">No moves — Our Lady reshuffles the garden…</div>`;
+    maryReshuffle(); maryRenderAll();
+    await m3delay(300); if (!maryAlive) return;
+    el.maryResult.innerHTML = '';
+  }
+  maryResolving = false;
+  if (maryTierCleared >= goal || maryMoves <= 0) endMaryTier();
+}
+function maryReshuffle() {
+  let order;
+  do {
+    order = shuffle(maryBoard.map((_, i) => i));
+    var trial = new Array(maryBoard.length);
+    for (let k = 0; k < order.length; k++) trial[k] = maryBoard[order[k]];
+  } while (findMatches(trial).size > 0 || !hasPossibleMove(trial));
+  const nv = new Array(maryBoard.length), ne = new Array(maryBoard.length);
+  for (let k = 0; k < order.length; k++) { nv[k] = maryBoard[order[k]]; ne[k] = maryEls[order[k]]; }
+  maryBoard = nv; maryEls = ne;
+}
+async function maryResolve() {
+  let chain = 0;
+  while (true) {
+    const m = findMatches(maryBoard);
+    if (m.size === 0) break;
+    chain++;
+    maryTierCleared += m.size; maryTotalCleared += m.size;
+    maryUpdateHud();
+    (chain >= 3) ? sndCorrect() : sndTick();
+    m.forEach(idx => { if (maryEls[idx]) maryEls[idx].classList.add('clearing'); });
+    await m3delay(200); if (!maryAlive) return;
+    m.forEach(idx => { if (maryEls[idx]) maryEls[idx].remove(); maryEls[idx] = null; maryBoard[idx] = null; });
+    maryCollapseDOM();
+    maryRenderAll();
+    await m3delay(240); if (!maryAlive) return;
+  }
+}
+function endMaryTier() {
+  if (maryTierCleared >= MARY_TIERS[maryTier].goal) maryGoalsMet++;
+  if (maryTier < MARY_TIERS.length - 1) {
+    maryTier++;
+    setTimeout(() => { if (maryAlive) beginMaryTier(); }, 650);
+  } else {
+    finishMary();
+  }
+}
+function finishMary() {
+  if (maryDone) return;
+  maryDone = true; maryAlive = false; marySel = -1;
+  const { cents, jackpot } = maryReward(maryTotalCleared, maryGoalsMet);
+  engine.awardBonus(cents, maryGoalsMet + ' of ' + MARY_TIERS.length + ' tiers', 'Mary');
+  updateBank(); floatDelta(cents);
+  if (jackpot) { sndJackpot(); applause(); } else { sndCorrect(); }
+  const msg = jackpot
+    ? 'All three tiers — a crown of roses! 🌹'
+    : `Cleared ${maryTotalCleared} across ${maryGoalsMet} tier${maryGoalsMet === 1 ? '' : 's'}`;
+  el.maryResult.innerHTML = `<div class="r-amt ${jackpot ? 'fast' : ''}">${jackpot ? 'BINGO! ' + fmtDelta(cents) : fmtDelta(cents)}</div><div class="r-sub">${msg}</div>`;
+  el.maryBtn.textContent = 'Continue';
+  el.maryBtn.disabled = false;
+  el.maryBtn.onclick = () => { el.maryBtn.onclick = startMary; nextQuestion(); };
+}
+
+/* ---------- Next round / difficulty ---------- */
+let nrChosen = false;
+function showNextRound() {
+  nrChosen = false;
+  el.nrTitle.textContent = `Round ${game.roundIndex + 1} Complete`;
+  el.nrBank.textContent = fmtCents(game.bank);
+  el.nrQuip.textContent = '';
+  el.nrQuip.classList.remove('show');
+  document.querySelectorAll('.nr-choice').forEach(b => { b.classList.remove('picked'); b.disabled = false; });
+  show('nextround');
+}
+function pickDifficulty(choiceEl) {
+  if (nrChosen) return;
+  nrChosen = true;
+  choiceEl.classList.add('picked');
+  document.querySelectorAll('.nr-choice').forEach(b => b.disabled = true);
+  const nextName = ROUNDS[game.roundIndex + 1].name;
+  el.nrQuip.textContent = '😇 Easier it is — we always go easier. Loading “' + nextName + '”…';
+  el.nrQuip.classList.add('show');
+  sndCorrect();
+  setTimeout(() => beginRound(game.roundIndex + 1), 1900);
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+
+function showResults() {
+  show('results');
+  const bank = game.bank;
+  const questions = game.log.filter(r => !r.bonus);
+  const totalQ = questions.length;
+  const correct = questions.filter(r => r.wasCorrect).length;
+  const accuracy = totalQ ? Math.round(correct / totalQ * 100) : 0;
+  const best = Math.max(0, ...game.log.map(r => r.deltaCents));
+
+  el.finalBank.textContent = fmtCents(bank);
+  el.finalBank.classList.toggle('neg', bank < 0);
+  el.resHero.classList.toggle('neg', bank < 0);
+
+  // dynamic headline + emoji (whole game)
+  let emoji, headline;
+  if (bank >= 800_000)      { emoji = '🏆'; headline = 'Blessed! A holy haul.'; }
+  else if (bank >= 300_000) { emoji = '😇'; headline = 'Well played, disciple.'; }
+  else if (bank >= 0)       { emoji = '🙂'; headline = 'You kept the faith.'; }
+  else                      { emoji = '😬'; headline = 'Rough pilgrimage — try again?'; }
+  el.resEmoji.textContent = emoji;
+  el.resHeadline.textContent = headline;
+  el.resHeadline.style.color = bank < 0 ? 'var(--red)' : 'var(--gold)';
+
+  el.resStats.innerHTML =
+    `<div class="stat"><span class="v ${correct>0?'pos':''}">${correct}/${totalQ}</span><span class="k">Correct</span></div>` +
+    `<div class="stat"><span class="v">${accuracy}%</span><span class="k">Accuracy</span></div>` +
+    `<div class="stat"><span class="v gold">${best>0?fmtDelta(best):'—'}</span><span class="k">Best</span></div>`;
+
+  el.resList.innerHTML = '';
+  let currentRound = null;
+  game.log.forEach(r => {
+    if (r.round !== currentRound) {
+      currentRound = r.round;
+      const h = document.createElement('div');
+      h.className = 'res-round-title';
+      h.innerHTML = `<span class="rt-ic">${r.roundIcon || ''}</span> ${esc(r.round)}`;
+      el.resList.appendChild(h);
+    }
+    const row = document.createElement('div');
+    const dcls = r.deltaCents > 0 ? 'pos' : (r.deltaCents < 0 ? 'neg' : 'safe');
+    const deltaTxt = r.deltaCents === 0 ? '$0' : fmtDelta(r.deltaCents);
+
+    if (r.bonus) {
+      row.className = 'res-row bonus';
+      const line = r.category === 'Manna'  ? `Filled your basket in <b>${esc(r.body)}</b>`
+        : r.category === 'Match3' ? `Cleared <b>${esc(r.body)}</b> from the board`
+        : r.category === 'Mary'   ? `Mother Mary Match-3 — completed <b>${esc(r.body)}</b>`
+        : r.category === 'Coffee' ? `Holy Coffee — a blessed cup ☕`
+        : r.category === 'Sneeze' ? `A saintly sneeze — <b>Bless you!</b>`
+        : `Wheel landed on <b>${esc(r.body)}</b>`;
+      row.innerHTML =
+        `<div class="res-badge star">★</div>` +
+        `<div class="res-main">` +
+          `<div class="res-qhead"><span class="res-cat">${esc(r.category)}</span><span class="res-delta ${dcls}">${deltaTxt}</span></div>` +
+          `<div class="res-bonus-line">${line}</div>` +
+        `</div>`;
+    } else {
+      row.className = 'res-row';
+      const badge = r.wasCorrect ? '<div class="res-badge ok">✓</div>' : '<div class="res-badge bad">✕</div>';
+      let ansLine;
+      if (r.wasCorrect) {
+        ansLine = `<span class="res-tag">You:</span> <span class="res-you ok">${esc(r.yourAnswer)}</span>`;
+      } else if (r.timedOut) {
+        ansLine = `<span class="res-tag">Timed out</span> <span class="res-tag">→</span> <span class="res-correct">${esc(r.correctAnswer)}</span>`;
+      } else {
+        ansLine = `<span class="res-you bad">${esc(r.yourAnswer)}</span> <span class="res-tag">→</span> <span class="res-correct">${esc(r.correctAnswer)}</span>`;
+      }
+      row.innerHTML =
+        badge +
+        `<div class="res-main">` +
+          `<div class="res-qhead"><span class="res-cat">${r.qNum} · ${esc(r.category)}</span><span class="res-delta ${dcls}">${deltaTxt}</span></div>` +
+          `<div class="res-q">${esc(r.body)}</div>` +
+          `<div class="res-ans">${ansLine}<span class="res-time">${(r.elapsedMs/1000).toFixed(1)}s</span></div>` +
+        `</div>`;
+    }
+    el.resList.appendChild(row);
+  });
+}
+
+/* wiring */
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('playAgainBtn').addEventListener('click', startGame);
+el.beginRoundBtn.addEventListener('click', () => nextQuestion());
+el.spinBtn.onclick = spinWheel;   // onclick only — never addEventListener (it double-fires)
+el.mannaBtn.onclick = beginManna;
+el.match3Btn.onclick = beginMatch3;
+el.maryBtn.onclick = startMary;
+document.querySelectorAll('.nr-choice').forEach(b => b.addEventListener('click', () => pickDifficulty(b)));
+document.addEventListener('keydown', (e) => {
+  const isEnter = e.key === 'Enter' || e.key === ' ';
+  if (!screens.play.classList.contains('hidden') && !answered) {
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 4) { const b = el.optionsGrid.querySelectorAll('.opt')[n-1]; if (b) onAnswer(n-1); }
+  }
+  if (!screens.home.classList.contains('hidden') && isEnter) startGame();
+  if (!screens.roundintro.classList.contains('hidden') && isEnter) nextQuestion();
+  if (!screens.bonus.classList.contains('hidden') && isEnter && !el.spinBtn.disabled) el.spinBtn.click();
+  if (!screens.manna.classList.contains('hidden') && isEnter && !el.mannaBtn.disabled) el.mannaBtn.click();
+  if (!screens.match3.classList.contains('hidden') && isEnter && !el.match3Btn.disabled) el.match3Btn.click();
+  if (!screens.marymatch3.classList.contains('hidden') && isEnter && !el.maryBtn.disabled) el.maryBtn.click();
+});
+buildWheel();
+
+/* ---------- Splash / intro (plays briefly on load) ---------- */
+const SPLASH_MS = 3200;   // how long the intro shows before revealing home (clip itself is ~8s)
+let splashDone = false;
+function dismissSplash() {
+  if (splashDone) return; splashDone = true;
+  const sp = document.getElementById('screenSplash');
+  const v = document.getElementById('splashVideo');
+  try { v.pause(); } catch (e) {}
+  sp.classList.add('fade');
+  setTimeout(() => sp.classList.add('gone'), 550);
+}
+(function runSplash() {
+  const sp = document.getElementById('screenSplash');
+  const v = document.getElementById('splashVideo');
+  if (!sp || !v) return;
+  const p = v.play && v.play();
+  if (p && p.catch) p.catch(() => {});          // autoplay may be blocked; timeout still dismisses
+  sp.addEventListener('pointerdown', () => { unlockAudio(); dismissSplash(); });   // tap to skip
+  v.addEventListener('ended', dismissSplash);   // dismiss early if the clip is shorter than SPLASH_MS
+  setTimeout(dismissSplash, SPLASH_MS);         // the 3-second splash cap
+})();
+
+/* =========================================================================
+   SELF-TESTS (mirror §8, revised curve). Open DevTools console.
+   ========================================================================= */
+(function runSelfTests() {
+  const R = [], A = (n, c) => R.push([n, !!c]);
+  A('t=0.35s → $1,000', valueAtElapsed(350) === 100_000);
+  A('t=2.35s still $1,000 (2s hold)', valueAtElapsed(2350) === 100_000);
+  A('t=7.35s → $500 (5s drain)', valueAtElapsed(7350) === 50_000);
+  A('t=12.35s → $0', valueAtElapsed(12_350) === 0);
+  A('t=13.35s still $0 (zero-hold end)', valueAtElapsed(13_350) === 0);
+  A('t=14.35s → -$100 floor', valueAtElapsed(14_350) === -10_000);
+  A('t=30s floored', valueAtElapsed(30_000) === -10_000);
+  { const e = new RoundEngine(PACK.questions); e.serveNext(0); const r = e.submitAnswer(e.current.correctIndex, 7350); A('correct @ $500 → +50,000', r.deltaCents === 50_000 && e.bankCents === 50_000); }
+  { const e = new RoundEngine(PACK.questions); e.serveNext(0); const r = e.submitAnswer((e.current.correctIndex+1)%4, 7350); A('wrong before $0 → no penalty ($0)', r.deltaCents === 0 && e.bankCents === 0); }
+  { const e = new RoundEngine(PACK.questions); e.serveNext(0); const r = e.submitAnswer((e.current.correctIndex+1)%4, 14_350); A('wrong after $0 → -$100', r.deltaCents === -10_000 && e.bankCents === -10_000); }
+  { const e = new RoundEngine(PACK.questions); e.serveNext(0); const r = e.submitAnswer(e.current.correctIndex, 14_350); A('correct after $0 → never negative ($0)', r.deltaCents === 0 && e.bankCents === 0); }
+  { const e = new RoundEngine(PACK.questions); e.serveNext(0); const r = e.timeout(16_000); A('timeout → -$100 flat', r.deltaCents === -10_000 && e.state === 'Revealing'); }
+  { const e = new RoundEngine(PACK.questions, 10, 40_000); A('bank carries over between rounds', e.bankCents === 40_000); }
+  { let ok = true; for (let t=0;t<100;t++){ const g=new RoundEngine(PACK.questions); const ids=g.order.map(q=>q.id); if (new Set(ids).size!==ids.length){ok=false;break;} } A('no dup questions x100', ok); }
+  { let ok = true; for (let t=0;t<50;t++){ const g=new RoundEngine(PACK.questions); g.serveNext(0); if(!g.submitAnswer(g.current.correctIndex,1000).wasCorrect){ok=false;break;} } A('shuffle preserves correct', ok); }
+  { const g = new RoundEngine(PACK.questions); for (let i=0;i<g.n;i++){ g.serveNext(0); g.state='AwaitingAnswer'; } let threw=false; try { g.state='Revealing'; g.serveNext(0); } catch(x){ threw=true; } A('serveNext after complete throws', threw); }
+  { const g = new RoundEngine(PACK.questions); g.awardBonus(200_000, 'BINGO', 'Bonus Spin'); A('BINGO awards +$2,000', g.bankCents === 200_000 && g.breakDone); }
+  A('manna <5s → $200', mannaReward(4) === 20_000);
+  A('manna =20s → $50', mannaReward(20) === 5_000);
+  A('manna mid (12.5s) between', mannaReward(12.5) < 20_000 && mannaReward(12.5) > 5_000);
+  A('5-round campaign configured', ROUNDS.length === 5 && ROUNDS[1].breakType === 'manna' && ROUNDS[3].breakType === 'match3' && ROUNDS[4].breakType === 'marymatch3');
+  A('Round 4 is American Catholics', ROUNDS[3].pack === PACK4 && PACK4.questions.length >= 10 && ROUNDS[3].count === 10);
+  A('Round 5 is The Blessed Mother', ROUNDS[4].pack === PACK5 && PACK5.questions.length >= 12);
+  A('100+ questions across all packs', (PACK.questions.length + PACK2.questions.length + PACK3.questions.length + PACK4.questions.length + PACK5.questions.length) >= 100);
+  A('six core categories present in PACK', ['Bible','Saints','Doctrine','History','Liturgy','Popes'].every(cat => PACK.questions.some(q => q.category === cat)));
+  // Match-3 pure logic
+  A('match3 initial board has no matches', findMatches(makeBoard()).size === 0);
+  { const b = new Array(M3_ROWS * M3_COLS); for (let i=0;i<b.length;i++) b[i]=(Math.floor(i/M3_COLS)+(i%M3_COLS))%2; b[m3at(0,1)]=b[m3at(0,2)]=b[m3at(0,3)]=4; A('match3 finds a horizontal run of 3', findMatches(b).has(m3at(0,2))); }
+  { const b = new Array(M3_ROWS * M3_COLS).fill(1); b[m3at(0,0)]=3; for (let r=1;r<M3_ROWS;r++) b[m3at(r,0)]=null; collapse(b); A('match3 gravity drops survivor to the bottom, refills top', b[m3at(M3_ROWS-1,0)]===3 && b[m3at(0,0)]!==null); }
+  A('match3 reward floors at $50', match3Reward(0) === 5_000);
+  A('match3 reward caps at $200', match3Reward(2000) === 20_000);
+  A('match3 reward mid between', match3Reward(24) > 5_000 && match3Reward(24) < 20_000);
+  A('wheel has a Holy Coffee slot', WHEEL.some(w => w.coffee));
+  // Mother Mary 3-tier match-3
+  A('Mary game has 3 tiers', MARY_TIERS.length === 3);
+  A('Mary reward: all tiers → $500 jackpot', maryReward(60, 3).cents >= 50_000 && maryReward(60, 3).jackpot);
+  A('Mary reward: partial is in $100–$450 band', maryReward(12, 1).cents >= 10_000 && maryReward(12, 1).cents <= 45_000);
+  A('Mary reuses the shared 6×7 board helpers', findMatches(makeBoard()).size === 0 && MARY_SYMBOLS.length === 6);
+  const pass = R.filter(x => x[1]).length;
+  console.log('%c[CatholicsApp.Engine self-tests] ' + pass + '/' + R.length + ' passed', pass === R.length ? 'color:#30D158;font-weight:bold' : 'color:#FF453A;font-weight:bold');
+  R.forEach(x => console.log((x[1] ? '  ✓ ' : '  ✗ ') + x[0]));
+})();
+</script>
+
+<script>
+/* PWA service-worker registration (no-op on file://, where SWs are unavailable) */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
