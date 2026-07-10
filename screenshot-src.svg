@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#17131f"/>
+      <stop offset="62%" stop-color="#080810"/>
+      <stop offset="100%" stop-color="#050507"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFCE45"/>
+      <stop offset="100%" stop-color="#F5B301"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <circle cx="540" cy="360" r="170" fill="none" stroke="#FFCE45" stroke-opacity="0.22" stroke-width="10"/>
+  <g fill="url(#gold)">
+    <rect x="516" y="240" width="48" height="248" rx="15"/>
+    <rect x="454" y="316" width="172" height="48" rx="15"/>
+  </g>
+  <text x="540" y="640" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="800" font-size="90" fill="#ffffff">Catholics.app</text>
+  <text x="540" y="726" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="60" fill="#FFCE45">Trivia</text>
+  <text x="540" y="806" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="500" font-size="38" fill="rgba(235,235,245,0.65)">Beat the clock. Bank your faith.</text>
+  <g font-family="Helvetica, Arial, sans-serif" font-weight="600" font-size="34" fill="rgba(235,235,245,0.88)" text-anchor="middle">
+    <rect x="240" y="878" width="600" height="76" rx="38" fill="rgba(255,206,69,0.10)" stroke="rgba(255,206,69,0.35)" stroke-width="2"/>
+    <text x="540" y="925">115 questions · 5 rounds · mini-games</text>
+  </g>
+</svg>

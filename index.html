@@ -8,7 +8,8 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <meta name="theme-color" content="#FFCE45" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Catholics.app" />
@@ -83,24 +84,7 @@
     border-radius: 20px;
     z-index: 50;
   }
-  /* Status bar */
-  .statusbar {
-    height: 54px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    padding: 0 26px 6px;
-    font-family: var(--fontText);
-    font-weight: 600;
-    font-size: 15px;
-    z-index: 40;
-  }
-  .statusbar .time { letter-spacing: 0.3px; }
-  .statusbar .icons { display: flex; align-items: center; gap: 6px; }
-  .statusbar svg { display: block; }
-
-  /* content area */
+  /* content area — top padding clears the Dynamic Island / device notch (real safe-area in standalone) */
   .content {
     flex: 1;
     min-height: 0;
@@ -108,7 +92,7 @@
     -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
-    padding: 4px 20px 26px;
+    padding: max(38px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
   }
   .hidden { display: none !important; }
 
@@ -623,22 +607,6 @@
 <div class="phone">
   <div class="island"></div>
   <div class="screen">
-    <!-- status bar -->
-    <div class="statusbar">
-      <div class="time">9:41</div>
-      <div class="icons">
-        <!-- cellular -->
-        <svg width="18" height="12" viewBox="0 0 18 12"><g fill="#fff">
-          <rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/>
-          <rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0.5" width="3" height="11.5" rx="1"/>
-        </g></svg>
-        <!-- wifi -->
-        <svg width="17" height="12" viewBox="0 0 17 12" fill="#fff"><path d="M8.5 2.2c2.6 0 5 1 6.8 2.6l1.4-1.5A11.4 11.4 0 0 0 8.5 0 11.4 11.4 0 0 0 .3 3.3l1.4 1.5A9.4 9.4 0 0 1 8.5 2.2Zm0 3.6c1.6 0 3.1.6 4.2 1.6l1.4-1.5a8 8 0 0 0-11.2 0l1.4 1.5A6 6 0 0 1 8.5 5.8Zm0 3.6c.7 0 1.3.3 1.8.7l-1.8 2-1.8-2c.5-.4 1.1-.7 1.8-.7Z"/></svg>
-        <!-- battery -->
-        <svg width="27" height="13" viewBox="0 0 27 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3.5" fill="none" stroke="rgba(255,255,255,0.45)"/><rect x="2" y="2" width="17" height="9" rx="2" fill="#fff"/><rect x="24" y="4" width="2" height="5" rx="1" fill="rgba(255,255,255,0.45)"/></svg>
-      </div>
-    </div>
-
     <div class="content">
       <!-- persistent bank bar (hidden on home) -->
       <div id="bankbar" class="bankbar hidden">

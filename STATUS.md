@@ -87,14 +87,21 @@ so testers get **fresh questions on replay**. A full playthrough is **46 questio
 engine ports to production C# unchanged). Everything timing-related derives from timestamps, not
 tick-counting. The 100ms UI meter is cosmetic only — score is computed authoritatively at submit time.
 
-## PWA groundwork (new — installable / PWABuilder-ready)
-- Added `manifest.webmanifest`, `icon.svg` (gold cross crest), and a minimal cache-first
-  `sw.js`. `index.html` links the manifest, sets `theme-color`, an apple-touch-icon, and
-  registers the service worker (guarded — no-op on `file://`).
+## PWA groundwork (installable / PWABuilder-ready)
+- `manifest.webmanifest` with a stable `id`, name/short_name, `theme_color`, `background_color`,
+  and a full **PNG icon set**: `icon-192.png`, `icon-512.png` (also referenced as `maskable`),
+  plus `icon.svg` and `apple-touch-icon.png` (180). One promo `screenshot-1.png` (1080×1080).
+  Icons/screenshot are generated from `icon-src.svg` / `screenshot-src.svg` (rasterized with
+  macOS `qlmanage` + `sips`).
+- Minimal cache-first `sw.js` (v4) precaches the app shell + icons + screenshot + `intro.mp4`;
+  network-first for the HTML page so edits show on reload.
 - **Must be served over http(s)** for the service worker to register: `python3 -m http.server 8000`,
-  then open `http://localhost:8000` (not `file://`).
-- Follow-up for store submission: replace the single `icon.svg` with real PNG icons
-  (192/512 + maskable) — PWABuilder/App Store want raster icons.
+  then open `http://localhost:8000` (not `file://`). GitHub Pages serves HTTPS, so it just works.
+- The fake iOS **status bar (time / signal / battery) was removed**; content uses
+  `env(safe-area-inset-*)` so it clears the real device notch in standalone mode.
+- Store-listing screenshots: `screenshot-1.png` is a branded placeholder that clears
+  PWABuilder's warning — replace with **real gameplay screenshots** in the store-submission step
+  (or drop PNGs in the folder and add them to the manifest `screenshots` array).
 
 ## Native path (documented future work)
 The eventual plan toward the stores:
