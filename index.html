@@ -44,7 +44,6 @@
     --red:           #FF5E7A;
     --green:         #46D6A0;
     --blue:          #6FA2FF;
-    --pink:          #FF8FA8;
     --fontRound: ui-rounded, "SF Pro Rounded", "SF Pro Display", system-ui, -apple-system, sans-serif;
     --fontText:  system-ui, -apple-system, "SF Pro Text", Helvetica, Arial, sans-serif;
   }
@@ -928,7 +927,7 @@
 
       <!-- NEXT ROUND / DIFFICULTY -->
       <div id="screenNextRound" class="nextround hidden">
-        <div class="kicker">Round Complete</div>
+        <div class="kicker">Well done!</div>
         <h2 id="nrTitle">Next Round</h2>
         <div class="nr-bank">Bank so far · <b id="nrBank" class="money">$0</b></div>
         <div class="nr-q">How do you want the next round?</div>
@@ -1132,7 +1131,7 @@ class RoundEngine {
   get questionNumber() { return this.idx + 1; }
 
   serveNext(now) {
-    if (this.idx + 1 >= this.n) { this.state = 'Complete'; throw new Error('Round complete'); }
+    if (this.idx + 1 >= this.n) throw new Error('Round complete');
     this.idx++;
     const src = this.order[this.idx];
     const correctText = src.options[src.correctIndex];
@@ -1513,7 +1512,6 @@ const el = {
   questionBody: document.getElementById('questionBody'),
   optionsGrid: document.getElementById('optionsGrid'),
   revealBox: document.getElementById('revealBox'),
-  playPanel: document.getElementById('screenPlay'),
   // round intro
   riIcon: document.getElementById('riIcon'),
   riConfetti: document.getElementById('riConfetti'),
@@ -1537,12 +1535,14 @@ const el = {
   basketFill: document.getElementById('basketFill'),
   mannaResult: document.getElementById('mannaResult'),
   mannaBtn: document.getElementById('mannaBtn'),
+  mannaSkip: document.getElementById('mannaSkip'),
   // match-3
   match3Board: document.getElementById('match3Board'),
   match3Moves: document.getElementById('match3Moves'),
   match3Score: document.getElementById('match3Score'),
   match3Result: document.getElementById('match3Result'),
   match3Btn: document.getElementById('match3Btn'),
+  match3Skip: document.getElementById('match3Skip'),
   // Mother Mary match-3 (3 tiers)
   maryBoard: document.getElementById('maryBoard'),
   maryBanner: document.getElementById('maryBanner'),
@@ -1551,6 +1551,7 @@ const el = {
   maryGoal: document.getElementById('maryGoal'),
   maryResult: document.getElementById('maryResult'),
   maryBtn: document.getElementById('maryBtn'),
+  marySkip: document.getElementById('marySkip'),
   // easter eggs
   sneezeOverlay: document.getElementById('sneezeOverlay'),
   sneezeSparkles: document.getElementById('sneezeSparkles'),
@@ -1573,13 +1574,17 @@ const el = {
 let game = { bank: 0, roundIndex: 0, log: [] };
 let engine = null, renderTimer = null, timeoutTimer = null, advanceTimer = null;
 let answered = false, lastTickSecond = -1, wheelRotation = 0, spinning = false;
+let angelShownThisRound = false;   // the Sleeping Angel gag plays once per round, not every timeout
 
 function show(name) { for (const k in screens) screens[k].classList.toggle('hidden', k !== name); }
 function updateBank() { el.bankVal.textContent = fmtCents(engine.bankCents); el.bankPill.classList.toggle('neg', engine.bankCents < 0); }
+let floatDeltaTo = null;
 function floatDelta(c) {
   const f = el.floatDelta; f.textContent = fmtDelta(c);
   f.className = 'float-delta ' + (c >= 0 ? 'pos' : 'neg');
-  void f.offsetWidth; f.classList.add('run'); setTimeout(() => f.classList.remove('run'), 1500);
+  clearTimeout(floatDeltaTo);   // a quick second award must not clip this animation early
+  void f.offsetWidth; f.classList.add('run');
+  floatDeltaTo = setTimeout(() => f.classList.remove('run'), 1500);
 }
 
 /* ---------- Game / round lifecycle ---------- */
@@ -1593,6 +1598,7 @@ function startGame() {
 
 function beginRound(idx) {
   game.roundIndex = idx;
+  angelShownThisRound = false;
   const rc = ROUNDS[idx];
   engine = new RoundEngine(rc.pack.questions, rc.count, game.bank);
   updateBank();
@@ -1635,21 +1641,24 @@ function onRoundComplete() {
   else showResults();
 }
 
+const PREROLL_TICK_MS = 800;   // per-number pace of the 3-2-1 (was 500 — too quick on device)
+let prerollIv = null;          // tracked so a re-entrant call can never stack two countdowns
+
 function nextQuestion() {
   if (engine.idx + 1 >= engine.n) { onRoundComplete(); return; }
+  clearInterval(prerollIv);
   const qNext = engine.idx + 2;
   const catNext = engine.order[engine.idx + 1].category;
   el.prerollQ.textContent = `Question ${qNext} of ${engine.n}`;
   el.prerollCat.textContent = catNext;
   show('preroll');
   let c = 3; prerollShow(c);
-  const iv = setInterval(() => {
+  prerollIv = setInterval(() => {
     c--;
-    if (c <= 0) { clearInterval(iv); serveQuestion(); }
+    if (c <= 0) { clearInterval(prerollIv); prerollIv = null; serveQuestion(); }
     else { prerollShow(c); }
   }, PREROLL_TICK_MS);
 }
-const PREROLL_TICK_MS = 800;   // per-number pace of the 3-2-1 (was 500 — too quick on device)
 
 // Show one countdown number with its ring/pulse/spring animation + escalating color.
 function prerollShow(n) {
@@ -1669,13 +1678,13 @@ function serveQuestion() {
   el.qProg.textContent = `Q${engine.questionNumber} / ${engine.n}`;
   el.questionBody.textContent = q.body;
   el.revealBox.innerHTML = '';
-  el.playPanel.classList.remove('flashG', 'flashR');
+  screens.play.classList.remove('flashG', 'flashR');
   el.meterValue.classList.remove('frozen');
   el.optionsGrid.innerHTML = '';
   q.options.forEach((opt, i) => {
     const b = document.createElement('button');
     b.className = 'opt';
-    b.innerHTML = `<span class="key">${i + 1}</span><span>${opt}</span>`;
+    b.innerHTML = `<span class="key">${i + 1}</span><span>${esc(opt)}</span>`;
     b.addEventListener('click', () => onAnswer(i));
     el.optionsGrid.appendChild(b);
   });
@@ -1719,8 +1728,8 @@ function reveal(result, chosenIndex) {
     else if (i === chosenIndex) b.classList.add('wrong');
     else b.classList.add('dim');
   });
-  if (result.wasCorrect) { el.playPanel.classList.add('flashG'); sndCorrect(); applause(); }
-  else { el.playPanel.classList.add('flashR'); sndWrong(); }
+  if (result.wasCorrect) { screens.play.classList.add('flashG'); sndCorrect(); applause(); }
+  else { screens.play.classList.add('flashR'); sndWrong(); }
   updateBank();
   if (result.deltaCents !== 0) floatDelta(result.deltaCents);   // no float on a $0 (safe) miss
 
@@ -1738,15 +1747,16 @@ function reveal(result, chosenIndex) {
   // the reveal keeps the verdict + timing + citation, no duplicate dollar figure.
   el.revealBox.innerHTML = `<div class="cite">${label} · ${secs}s · ${result.citation}</div>`;
 
-  // Time-out gag: the guardian angel dozed off. Give the advance extra time to let it play.
-  if (result.timedOut) triggerAngel();
+  // Time-out gag: the guardian angel dozed off — once per round, with extra time to play out.
+  const playAngel = result.timedOut && !angelShownThisRound;
+  if (playAngel) { angelShownThisRound = true; triggerAngel(); }
 
   advanceTimer = setTimeout(() => {
     el.meterValue.classList.remove('frozen');
     const rc = ROUNDS[game.roundIndex];
     if (engine.questionNumber === rc.breakAt && !engine.breakDone) showBreak(rc.breakType);
     else nextQuestion();
-  }, result.timedOut ? 3800 : 2500);
+  }, playAngel ? 3800 : 2500);
 }
 
 function showBreak(type) {
@@ -1861,12 +1871,13 @@ function triggerSneeze(done) {
   }
   el.sneezeAmt.textContent = fmtDelta(SNEEZE_BONUS);
   ov.classList.remove('hidden');
+  ov.setAttribute('aria-hidden', 'false');
   void ov.offsetWidth;
   ov.classList.add('show');
   setTimeout(() => { sndAchoo(); ov.classList.add('achoo'); }, 850);
   setTimeout(() => { sndChoir(); }, 1200);
   setTimeout(() => { engine.awardBonus(SNEEZE_BONUS, 'Bless you!', 'Sneeze'); updateBank(); floatDelta(SNEEZE_BONUS); }, 1250);
-  setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show', 'achoo'); if (done) done(); }, 2900);
+  setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show', 'achoo'); ov.setAttribute('aria-hidden', 'true'); if (done) done(); }, 2900);
 }
 
 function triggerCoffee(cents, done) {
@@ -1892,9 +1903,10 @@ function triggerCoffee(cents, done) {
   }
   el.hcAmt.textContent = fmtDelta(cents);
   ov.classList.remove('hidden');
+  ov.setAttribute('aria-hidden', 'false');
   void ov.offsetWidth;
   ov.classList.add('show');
-  setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show'); if (done) done(); }, 3200);
+  setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show'); ov.setAttribute('aria-hidden', 'true'); if (done) done(); }, 3200);
 }
 
 // The Sleeping Angel — plays when the clock runs out (a gentle gag).
@@ -1904,6 +1916,7 @@ function triggerAngel(done) {
   ov.classList.remove('show', 'wake');
   glass.textContent = '⏳';
   ov.classList.remove('hidden');
+  ov.setAttribute('aria-hidden', 'false');
   void ov.offsetWidth;
   ov.classList.add('show');
   sndSnore();
@@ -1914,7 +1927,7 @@ function triggerAngel(done) {
     tone(520, 0.08, 'triangle', 0.06, 0);  // startled little gasp
     tone(780, 0.10, 'triangle', 0.06, 0.09);
   }, 1600);
-  setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show', 'wake'); if (done) done(); }, 3400);
+  setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show', 'wake'); ov.setAttribute('aria-hidden', 'true'); if (done) done(); }, 3400);
 }
 
 /* ---------- Manna reaction game ---------- */
@@ -1952,7 +1965,7 @@ function beginManna() {
   el.mannaBtn.disabled = true;
   el.mannaBtn.textContent = 'Collecting…';
   mannaStart = performance.now();
-  document.getElementById('mannaSkip').classList.add('show');
+  el.mannaSkip.classList.add('show');
   spawnFlake();
   mannaSpawnIv = setInterval(spawnFlake, 460);
   mannaRaf = requestAnimationFrame(tickManna);
@@ -1984,7 +1997,7 @@ function tickManna() {
 }
 function finishManna() {
   mannaActive = false;
-  document.getElementById('mannaSkip').classList.remove('show');
+  el.mannaSkip.classList.remove('show');
   clearInterval(mannaSpawnIv); mannaSpawnIv = null;
   cancelAnimationFrame(mannaRaf); mannaRaf = null;
   clearFlakes();
@@ -2167,7 +2180,7 @@ function beginMatch3() {
     boardEls[i] = t;
   }
   updateMatch3Hud();
-  document.getElementById('match3Skip').classList.add('show');
+  el.match3Skip.classList.add('show');
   void el.match3Board.offsetWidth;
   requestAnimationFrame(m3RenderAll); // intro cascade: tiles drop into place
 }
@@ -2260,7 +2273,7 @@ function finishMatch3() {
   match3Done = true;
   match3Alive = false;
   match3Sel = -1;
-  document.getElementById('match3Skip').classList.remove('show');
+  el.match3Skip.classList.remove('show');
   let cents = match3Reward(match3Cleared), jackpot = false;
   if (match3BigClear >= 8) { cents = 20_000; jackpot = true; }   // big "fall from heaven" cascade → BINGO $200
   engine.awardBonus(cents, match3Cleared + ' gifts', 'Match3');
@@ -2369,7 +2382,7 @@ function startMary() {
   maryStarted = true; maryAlive = true;
   el.maryBtn.disabled = true; el.maryBtn.textContent = 'Praying…';
   el.maryResult.innerHTML = '';
-  document.getElementById('marySkip').classList.add('show');
+  el.marySkip.classList.add('show');
   beginMaryTier();
 }
 function beginMaryTier() {
@@ -2469,7 +2482,7 @@ function endMaryTier() {
 function finishMary() {
   if (maryDone) return;
   maryDone = true; maryAlive = false; marySel = -1;
-  document.getElementById('marySkip').classList.remove('show');
+  el.marySkip.classList.remove('show');
   const { cents, jackpot } = maryReward(maryTotalCleared, maryGoalsMet);
   engine.awardBonus(cents, maryGoalsMet + ' of ' + MARY_TIERS.length + ' tiers', 'Mary');
   updateBank(); floatDelta(cents);
@@ -2497,7 +2510,7 @@ function skipBreak(kind) {
     el.mannaResult.innerHTML = `<div class="r-amt">${fmtDelta(SKIP_AWARD)}</div><div class="r-sub">No worries — onward!</div>`;
     el.mannaBtn.textContent = 'Continue'; el.mannaBtn.disabled = false;
     el.mannaBtn.onclick = () => { el.mannaBtn.onclick = beginManna; nextQuestion(); };
-    document.getElementById('mannaSkip').classList.remove('show');
+    el.mannaSkip.classList.remove('show');
   } else if (kind === 'match3') {
     if (!match3Alive || match3Done) return;
     match3Done = true; match3Alive = false; match3Sel = -1;
@@ -2506,7 +2519,7 @@ function skipBreak(kind) {
     el.match3Result.innerHTML = `<div class="r-amt">${fmtDelta(SKIP_AWARD)}</div><div class="r-sub">No worries — onward!</div>`;
     el.match3Btn.textContent = 'Continue'; el.match3Btn.disabled = false;
     el.match3Btn.onclick = () => { el.match3Btn.onclick = beginMatch3; nextQuestion(); };
-    document.getElementById('match3Skip').classList.remove('show');
+    el.match3Skip.classList.remove('show');
   } else if (kind === 'mary') {
     if (!maryAlive || maryDone) return;
     maryDone = true; maryAlive = false; marySel = -1;
@@ -2515,7 +2528,7 @@ function skipBreak(kind) {
     el.maryResult.innerHTML = `<div class="r-amt">${fmtDelta(SKIP_AWARD)}</div><div class="r-sub">No worries — onward!</div>`;
     el.maryBtn.textContent = 'Continue'; el.maryBtn.disabled = false;
     el.maryBtn.onclick = () => { el.maryBtn.onclick = startMary; nextQuestion(); };
-    document.getElementById('marySkip').classList.remove('show');
+    el.marySkip.classList.remove('show');
   }
 }
 
@@ -2640,12 +2653,15 @@ el.spinBtn.onclick = spinWheel;   // onclick only — never addEventListener (it
 el.mannaBtn.onclick = beginManna;
 el.match3Btn.onclick = beginMatch3;
 el.maryBtn.onclick = startMary;
-document.getElementById('mannaSkip').onclick = () => skipBreak('manna');
-document.getElementById('match3Skip').onclick = () => skipBreak('match3');
-document.getElementById('marySkip').onclick = () => skipBreak('mary');
+el.mannaSkip.onclick = () => skipBreak('manna');
+el.match3Skip.onclick = () => skipBreak('match3');
+el.marySkip.onclick = () => skipBreak('mary');
 document.querySelectorAll('.nr-choice').forEach(b => b.addEventListener('click', () => pickDifficulty(b)));
 document.addEventListener('keydown', (e) => {
   const isEnter = e.key === 'Enter' || e.key === ' ';
+  // Enter/Space is handled entirely here — prevent the native activation of a still-focused
+  // button, which would double-fire the action (two prerolls, orphaned timers).
+  if (isEnter) e.preventDefault();
   if (!screens.play.classList.contains('hidden') && !answered) {
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= 4) { const b = el.optionsGrid.querySelectorAll('.opt')[n-1]; if (b) onAnswer(n-1); }
@@ -2656,6 +2672,7 @@ document.addEventListener('keydown', (e) => {
   if (!screens.manna.classList.contains('hidden') && isEnter && !el.mannaBtn.disabled) el.mannaBtn.click();
   if (!screens.match3.classList.contains('hidden') && isEnter && !el.match3Btn.disabled) el.match3Btn.click();
   if (!screens.marymatch3.classList.contains('hidden') && isEnter && !el.maryBtn.disabled) el.maryBtn.click();
+  if (!screens.nextround.classList.contains('hidden') && isEnter && !nrChosen) pickDifficulty(document.querySelector('.nr-choice[data-d="same"]'));
   if (!screens.results.classList.contains('hidden') && isEnter) startGame();
 });
 buildWheel();

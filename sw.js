@@ -2,7 +2,7 @@
    Network-first for the HTML page (so edits show on reload while online),
    cache-first for static assets, cache fallback everywhere for offline.
    Bump CACHE on each release. */
-const CACHE = 'catholics-trivia-v7';
+const CACHE = 'catholics-trivia-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -50,6 +50,6 @@ self.addEventListener('fetch', (e) => {
     caches.match(req).then((hit) => hit || fetch(req).then((res) => {
       if (res.ok && url.origin === self.location.origin) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
       return res;
-    }).catch(() => caches.match('./index.html')))
+    }).catch(() => Response.error()))   // a missing asset fails as an asset — never as index.html
   );
 });
