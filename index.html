@@ -53,11 +53,13 @@
 
   html, body {
     height: 100%;
-    background:
+    background-color: var(--bg-bot);   /* solid base — iOS overscroll/bounce shows this, never white */
+    background-image:
       radial-gradient(1100px 720px at 50% -6%, var(--bg-top), transparent 62%),
       radial-gradient(900px 900px at 88% 8%, rgba(255,159,188,0.10), transparent 60%),
       linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-bot) 78%);
     background-attachment: fixed;
+    overscroll-behavior: none;         /* no rubber-band at the page level */
     font-family: var(--fontText);
     color: var(--label);
     -webkit-font-smoothing: antialiased;
@@ -68,6 +70,7 @@
     justify-content: center;
     min-height: 100vh;
     padding: 20px;
+    overflow: hidden;                  /* the page never scrolls — all scrolling lives in .content */
   }
 
   /* ---------- iPhone device frame ---------- */
@@ -110,6 +113,7 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;     /* inner scroll never chains into a page bounce */
     -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
@@ -297,13 +301,13 @@
     fill: none; stroke: var(--cnum); stroke-width: 5; stroke-linecap: round;
     stroke-dasharray: 339.29; stroke-dashoffset: 0; filter: drop-shadow(0 0 6px var(--cnum));
   }
-  .count-wrap.run .ring-fg { animation: ringDrain 0.5s linear; }
+  .count-wrap.run .ring-fg { animation: ringDrain 0.8s linear; }   /* matches PREROLL_TICK_MS */
   @keyframes ringDrain { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 339.29; } }
   .count-pulse {
     position: absolute; width: 150px; height: 150px; border-radius: 50%;
     border: 2px solid var(--cnum); opacity: 0; pointer-events: none;
   }
-  .count-wrap.run .count-pulse { animation: countPulse 0.55s ease-out; }
+  .count-wrap.run .count-pulse { animation: countPulse 0.7s ease-out; }
   @keyframes countPulse { 0% { transform: scale(0.55); opacity: 0.5; } 100% { transform: scale(1.9); opacity: 0; } }
   .count {
     position: relative; font-family: var(--fontRound); font-weight: 900; font-size: 128px; line-height: 1;
@@ -1193,7 +1197,13 @@ function fmtDelta(c) {
    Audio (WebAudio, no external assets): tick, chime, buzz, applause
    ========================================================================= */
 let audioCtx = null;
-function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+function unlockAudio() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    // iOS WKWebView creates the context suspended — it must be resumed inside a user gesture
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) {}
+}
 function tone(freq, dur, type = 'square', vol = 0.06, when = 0) {
   if (!audioCtx) return;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -1637,8 +1647,9 @@ function nextQuestion() {
     c--;
     if (c <= 0) { clearInterval(iv); serveQuestion(); }
     else { prerollShow(c); }
-  }, 500);
+  }, PREROLL_TICK_MS);
 }
+const PREROLL_TICK_MS = 800;   // per-number pace of the 3-2-1 (was 500 — too quick on device)
 
 // Show one countdown number with its ring/pulse/spring animation + escalating color.
 function prerollShow(n) {
@@ -2620,6 +2631,8 @@ function showResults() {
 }
 
 /* wiring */
+// any tap unlocks/resumes audio (iOS suspends the context aggressively, incl. on app switch)
+document.addEventListener('pointerdown', unlockAudio, { passive: true });
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('playAgainBtn').addEventListener('click', startGame);
 el.beginRoundBtn.addEventListener('click', () => nextQuestion());
