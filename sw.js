@@ -2,7 +2,7 @@
    Network-first for the HTML page (so edits show on reload while online),
    cache-first for static assets, cache fallback everywhere for offline.
    Bump CACHE on each release. */
-const CACHE = 'catholics-trivia-v8';
+const CACHE = 'catholics-trivia-v10';
 const ASSETS = [
   './',
   './index.html',

@@ -390,6 +390,36 @@
   .opt.dim { opacity: 0.4; }
 
   .reveal { text-align: center; min-height: 56px; margin-top: 16px; }
+  /* ⓘ source-info icon on the reveal line (~18pt) */
+  .cite-info {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 1.5px solid var(--gold); color: var(--gold);
+    background: rgba(252,216,121,0.12);
+    font: italic 700 15px Georgia, 'Times New Roman', serif;
+    margin-left: 8px; padding: 0; vertical-align: middle; cursor: pointer;
+    transition: transform 0.08s, background 0.12s;
+  }
+  .cite-info:active { transform: scale(0.92); background: rgba(252,216,121,0.28); }
+
+  /* source popover — holds the game while open */
+  .source-pop { position: absolute; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .source-pop.hidden { display: none; }
+  .sp-dim { position: absolute; inset: 0; background: rgba(8,5,14,0.66); backdrop-filter: blur(3px); }
+  .sp-card {
+    position: relative; width: 84%; max-width: 320px; text-align: center;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 40%),
+      var(--ios-elevated);
+    border: 1px solid rgba(252,216,121,0.35); border-radius: 22px;
+    padding: 22px 20px 16px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 18px 48px rgba(0,0,0,0.6);
+    animation: pop 0.35s ease-out;
+  }
+  .sp-kicker { color: var(--gold); font-weight: 800; font-size: 12.5px; letter-spacing: 2px; text-transform: uppercase; }
+  .sp-answer { font-family: var(--fontRound); font-weight: 800; font-size: 22px; margin-top: 10px; line-height: 1.25; }
+  .sp-cite { color: var(--label-2); font-size: 14.5px; line-height: 1.45; margin-top: 10px; }
+  .sp-close { color: var(--label-3); font-size: 12px; margin-top: 16px; }
   .reveal .delta { font-family: var(--fontRound); font-weight: 900; font-size: 32px; font-variant-numeric: tabular-nums; }
   .reveal .delta.pos { color: var(--green); }
   .reveal .delta.neg { color: var(--red); }
@@ -783,8 +813,32 @@
   .stat .v.pos { color: var(--green); } .stat .v.neg { color: var(--red); } .stat .v.gold { color: var(--gold); }
   .stat .k { font-size: 10.5px; color: var(--label-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
 
-  .res-section-title { font-size: 13px; font-weight: 700; color: var(--label-3); text-transform: uppercase; letter-spacing: 0.6px; margin: 20px 2px 10px; }
+  /* score medal (material tier) under the final bank */
+  .res-medal {
+    display: inline-flex; align-items: center; gap: 7px;
+    margin-top: 10px; padding: 7px 16px; border-radius: 999px;
+    font-family: var(--fontRound); font-weight: 800; font-size: 14px; letter-spacing: 0.6px;
+    border: 1.5px solid; text-transform: uppercase;
+  }
+  .res-medal.gold   { color: var(--gold);  border-color: rgba(252,216,121,0.55); background: rgba(252,216,121,0.12); box-shadow: 0 0 18px rgba(252,216,121,0.25); }
+  .res-medal.silver { color: #D6DAE3; border-color: rgba(214,218,227,0.5);  background: rgba(214,218,227,0.10); }
+  .res-medal.bronze { color: #E0A878; border-color: rgba(224,168,120,0.5);  background: rgba(224,168,120,0.10); }
+  .res-medal.wood   { color: #B08D6A; border-color: rgba(176,141,106,0.5);  background: rgba(176,141,106,0.10); }
+
+  /* achievements earned at the breaks */
+  .res-ach { display: flex; flex-direction: column; gap: 8px; }
+  .ach-chip {
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(180deg, rgba(252,216,121,0.14), rgba(255,159,188,0.05));
+    border: 1px solid rgba(252,216,121,0.30); border-radius: 16px; padding: 11px 14px;
+  }
+  .ach-chip .ach-ic { font-size: 24px; flex-shrink: 0; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35)); }
+  .ach-chip .ach-name { font-family: var(--fontRound); font-weight: 800; font-size: 14.5px; color: var(--gold); }
+  .ach-chip .ach-desc { font-size: 12px; color: var(--label-2); margin-top: 1px; }
+
+  .res-section-title { font-size: 13px; font-weight: 700; color: var(--label-3); text-transform: uppercase; letter-spacing: 0.6px; margin: 14px 2px 10px; }
   .res-list { display: flex; flex-direction: column; gap: 8px; }
+  .res-list > .res-round-title:first-child { margin-top: 2px; }   /* no trapped space above the first round group */
   .res-row {
     display: flex; gap: 12px; align-items: flex-start;
     background:
@@ -877,7 +931,7 @@
         </div>
         <div class="card rules">
           <div class="rules-row"><div class="ic">⏱️</div><div class="tx">Every question starts at <b>$1,000</b>, holds for a breath, then drains <b>$100 a second</b>. Answer fast to bank more.</div></div>
-          <div class="rules-row"><div class="ic">✅</div><div class="tx"><b>Correct</b> adds the live value to your bank.</div></div>
+          <div class="rules-row"><div class="ic">✅</div><div class="tx"><b>Answer right</b> to bank whatever's still on the clock.</div></div>
           <div class="rules-row"><div class="ic">🕊️</div><div class="tx"><b>Wrong before the clock hits $0?</b> No penalty. After $0 (or time out), it's a flat <b>−$100</b>.</div></div>
           <div class="rules-row"><div class="ic">🎁</div><div class="tx">Reach the halfway mark of each round for a <b>bonus break</b> — spins, games & heavenly surprises.</div></div>
         </div>
@@ -956,10 +1010,10 @@
         <div class="cta"><button class="btn" id="mannaBtn">Start Collecting</button></div>
       </div>
 
-      <!-- MATCH-3 (Gifts from Heaven) -->
+      <!-- MATCH-3 (American Match — Round 4 break) -->
       <div id="screenMatch3" class="match3 hidden">
-        <div class="kicker">Gifts from Heaven</div>
-        <h2>Heavenly Match-3</h2>
+        <div class="kicker">Halfway Break</div>
+        <h2>American Match</h2>
         <div class="blurb">Tap a symbol, then a neighbor, to swap. Line up <b>3+</b> to clear them — new gifts <b>fall from heaven</b>. You have <b>15 moves</b>.</div>
         <div class="manna-hud">
           <div class="hud-item"><span class="hud-k">Moves</span><span class="hud-v money" id="match3Moves">15</span></div>
@@ -1010,9 +1064,12 @@
           <div class="res-emoji" id="resEmoji">🙂</div>
           <div class="lbl">Final Bank</div>
           <div class="final money" id="finalBank">$0</div>
+          <div class="res-medal" id="resMedal"></div>
           <div class="headline" id="resHeadline"></div>
           <div class="res-stats" id="resStats"></div>
         </div>
+        <div class="res-section-title hidden" id="resAchTitle">Achievements</div>
+        <div class="res-ach hidden" id="resAch"></div>
         <div class="res-section-title">Round Breakdown</div>
         <div class="res-list" id="resList"></div>
         <div class="cta"><button class="btn" id="playAgainBtn">Play Again</button></div>
@@ -1058,6 +1115,17 @@
         </div>
         <div class="angel-text">The guardian angel dozed off!</div>
         <div class="angel-sub">Time’s up — <i>“Oops… I nodded off!”</i> 🤷</div>
+      </div>
+    </div>
+
+    <!-- SOURCE POPOVER (opened by the ⓘ icon on the answer reveal) -->
+    <div id="sourcePop" class="source-pop hidden" aria-hidden="true">
+      <div class="sp-dim"></div>
+      <div class="sp-card">
+        <div class="sp-kicker">📖 Source</div>
+        <div class="sp-answer" id="spAnswer"></div>
+        <div class="sp-cite" id="spCite"></div>
+        <div class="sp-close">Tap anywhere to continue</div>
       </div>
     </div>
 
@@ -1561,9 +1629,16 @@ const el = {
   hcOverflow: document.getElementById('hcOverflow'),
   hcAmt: document.getElementById('hcAmt'),
   angelOverlay: document.getElementById('angelOverlay'),
+  // source popover
+  sourcePop: document.getElementById('sourcePop'),
+  spAnswer: document.getElementById('spAnswer'),
+  spCite: document.getElementById('spCite'),
   // results
   resHero: document.getElementById('resHero'),
   resEmoji: document.getElementById('resEmoji'),
+  resMedal: document.getElementById('resMedal'),
+  resAchTitle: document.getElementById('resAchTitle'),
+  resAch: document.getElementById('resAch'),
   finalBank: document.getElementById('finalBank'),
   resHeadline: document.getElementById('resHeadline'),
   resStats: document.getElementById('resStats'),
@@ -1590,10 +1665,17 @@ function floatDelta(c) {
 /* ---------- Game / round lifecycle ---------- */
 function startGame() {
   unlockAudio();
-  game = { bank: 0, roundIndex: 0, log: [] };
+  game = { bank: 0, roundIndex: 0, log: [], achievements: [] };
   wheelRotation = 0;
   el.bankbar.classList.remove('hidden');
   beginRound(0);
+}
+
+// Record a break-award achievement (shown on the final results screen). Deduped by name.
+function addAchievement(icon, name, desc) {
+  if (!game.achievements) game.achievements = [];
+  if (game.achievements.some(a => a.name === name)) return;
+  game.achievements.push({ icon, name, desc });
 }
 
 function beginRound(idx) {
@@ -1607,7 +1689,7 @@ function beginRound(idx) {
   el.riName.textContent = rc.name;
   el.riSub.textContent = rc.subtitle;
   const breakLabel = rc.breakType === 'manna' ? 'Manna break at the half'
-    : rc.breakType === 'match3' ? 'Match-3 break at the half'
+    : rc.breakType === 'match3' ? 'American Match at the half'
     : rc.breakType === 'marymatch3' ? 'Mother Mary Match-3 (3 tiers) at the half'
     : 'Bonus wheel at the half';
   el.riMeta.textContent = `${rc.count} questions · ${breakLabel}`;
@@ -1635,6 +1717,8 @@ function roundIntroConfetti(icon) {
 
 function onRoundComplete() {
   const rc = ROUNDS[game.roundIndex];
+  const qs = engine.log.filter(r => !r.bonus);
+  if (qs.length && qs.every(r => r.wasCorrect)) addAchievement('✨', 'Perfect Round — ' + rc.name, 'Every question right in ' + rc.name);
   engine.log.forEach(r => { r.round = rc.name; r.roundIcon = rc.icon; game.log.push(r); });
   game.bank = engine.bankCents;
   if (game.roundIndex < ROUNDS.length - 1) showNextRound();
@@ -1745,18 +1829,42 @@ function reveal(result, chosenIndex) {
   }
   // Bank change is shown only once now — the floating +/− near the bank pill (top);
   // the reveal keeps the verdict + timing + citation, no duplicate dollar figure.
-  el.revealBox.innerHTML = `<div class="cite">${label} · ${secs}s · ${result.citation}</div>`;
+  // The ⓘ opens a source popover; while it's open the auto-advance is held.
+  el.revealBox.innerHTML =
+    `<div class="cite">${label} · ${secs}s · ${esc(result.citation)}` +
+    `<button class="cite-info" id="citeInfoBtn" aria-label="About this source">i</button></div>`;
+  const correctText = engine.current.options[result.correctIndex];
+  document.getElementById('citeInfoBtn').onclick = (e) => { e.stopPropagation(); openSourcePop(correctText, result.citation); };
 
-  // Time-out gag: the guardian angel dozed off — once per round, with extra time to play out.
-  const playAngel = result.timedOut && !angelShownThisRound;
-  if (playAngel) { angelShownThisRound = true; triggerAngel(); }
+  // Time-out gag: the guardian angel dozed off — once per round (it fits within the reveal pause).
+  if (result.timedOut && !angelShownThisRound) { angelShownThisRound = true; triggerAngel(); }
 
-  advanceTimer = setTimeout(() => {
-    el.meterValue.classList.remove('frozen');
-    const rc = ROUNDS[game.roundIndex];
-    if (engine.questionNumber === rc.breakAt && !engine.breakDone) showBreak(rc.breakType);
-    else nextQuestion();
-  }, playAngel ? 3800 : 2500);
+  advanceTimer = setTimeout(advanceAfterReveal, REVEAL_MS);
+}
+
+const REVEAL_MS = 5000;          // linger on the verdict + source before auto-advancing
+const REVEAL_RESUME_MS = 1600;   // brief beat after closing the source popover
+
+function advanceAfterReveal() {
+  el.meterValue.classList.remove('frozen');
+  const rc = ROUNDS[game.roundIndex];
+  if (engine.questionNumber === rc.breakAt && !engine.breakDone) showBreak(rc.breakType);
+  else nextQuestion();
+}
+
+/* ---------- Source popover (the reveal's ⓘ icon) ---------- */
+function openSourcePop(correctText, citation) {
+  clearTimeout(advanceTimer); advanceTimer = null;   // hold the game while reading
+  el.spAnswer.textContent = correctText;
+  el.spCite.textContent = citation;
+  el.sourcePop.classList.remove('hidden');
+  el.sourcePop.setAttribute('aria-hidden', 'false');
+}
+function closeSourcePop() {
+  if (el.sourcePop.classList.contains('hidden')) return;
+  el.sourcePop.classList.add('hidden');
+  el.sourcePop.setAttribute('aria-hidden', 'true');
+  advanceTimer = setTimeout(advanceAfterReveal, REVEAL_RESUME_MS);
 }
 
 function showBreak(type) {
@@ -1825,6 +1933,7 @@ function spinWheel() {
 
     // ☕ Holy Coffee — special wheel outcome
     if (seg.coffee) {
+      addAchievement('☕', 'Holy Coffee', 'Blessed with the rare cup on the Bonus Wheel');
       sndPour(); sndAhh();
       el.wheelResult.innerHTML = `<div class="r-amt norm">☕ Holy Coffee!</div><div class="r-sub">A blessed cup — ${fmtDelta(seg.cents)} added</div>`;
       el.spinBtn.disabled = true;
@@ -1832,7 +1941,7 @@ function spinWheel() {
       return;
     }
 
-    if (seg.jackpot) { sndJackpot(); applause(); } else { sndCorrect(); }
+    if (seg.jackpot) { addAchievement('🎡', 'BINGO!', 'Hit the $2,000 jackpot on the Bonus Wheel'); sndJackpot(); applause(); } else { sndCorrect(); }
     const cls = seg.jackpot ? 'jackpot' : 'norm';
     const headline = seg.jackpot ? 'BINGO!' : fmtDelta(seg.cents);
     const sub = seg.jackpot ? `Jackpot — ${fmtCents(seg.cents)} added to your bank!` : `Added to your bank`;
@@ -1876,7 +1985,7 @@ function triggerSneeze(done) {
   ov.classList.add('show');
   setTimeout(() => { sndAchoo(); ov.classList.add('achoo'); }, 850);
   setTimeout(() => { sndChoir(); }, 1200);
-  setTimeout(() => { engine.awardBonus(SNEEZE_BONUS, 'Bless you!', 'Sneeze'); updateBank(); floatDelta(SNEEZE_BONUS); }, 1250);
+  setTimeout(() => { engine.awardBonus(SNEEZE_BONUS, 'Bless you!', 'Sneeze'); addAchievement('🤧', 'Bless You!', 'Caught the rare saintly sneeze blessing'); updateBank(); floatDelta(SNEEZE_BONUS); }, 1250);
   setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('show', 'achoo'); ov.setAttribute('aria-hidden', 'true'); if (done) done(); }, 2900);
 }
 
@@ -2007,7 +2116,7 @@ function finishManna() {
   engine.awardBonus(reward, seconds.toFixed(1) + 's', 'Manna');
   updateBank(); floatDelta(reward);
   const fast = reward >= 20_000;
-  if (fast) { sndJackpot(); applause(); } else { sndCorrect(); }
+  if (fast) { addAchievement('⚡', 'Lightning Hands', 'Filled the manna basket in under 5 seconds'); sndJackpot(); applause(); } else { sndCorrect(); }
   el.mannaResult.innerHTML = `<div class="r-amt ${fast ? 'fast' : ''}">${fmtDelta(reward)}</div><div class="r-sub">Full basket in ${seconds.toFixed(1)}s${fast ? ' — lightning hands!' : ''}</div>`;
   el.mannaBtn.textContent = 'Continue';
   el.mannaBtn.disabled = false;
@@ -2275,7 +2384,7 @@ function finishMatch3() {
   match3Sel = -1;
   el.match3Skip.classList.remove('show');
   let cents = match3Reward(match3Cleared), jackpot = false;
-  if (match3BigClear >= 8) { cents = 20_000; jackpot = true; }   // big "fall from heaven" cascade → BINGO $200
+  if (match3BigClear >= 8) { cents = 20_000; jackpot = true; addAchievement('🌊', 'Heavenly Cascade', 'Cleared 8+ gifts in a single cascade'); }
   engine.awardBonus(cents, match3Cleared + ' gifts', 'Match3');
   updateBank(); floatDelta(cents);
   if (jackpot) { sndJackpot(); applause(); } else { sndCorrect(); }
@@ -2484,6 +2593,7 @@ function finishMary() {
   maryDone = true; maryAlive = false; marySel = -1;
   el.marySkip.classList.remove('show');
   const { cents, jackpot } = maryReward(maryTotalCleared, maryGoalsMet);
+  if (jackpot) addAchievement('🌹', 'Crown of Roses', 'Completed all three tiers of the Mother Mary Match-3');
   engine.awardBonus(cents, maryGoalsMet + ' of ' + MARY_TIERS.length + ' tiers', 'Mary');
   updateBank(); floatDelta(cents);
   if (jackpot) { sndJackpot(); applause(); } else { sndCorrect(); }
@@ -2563,6 +2673,18 @@ function pickDifficulty(choiceEl) {
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
+/* Final-score medal tiers (pure, self-tested). Bank drives the tier; 90%+ accuracy
+   with strong points earns gold even short of the bank bar. All cents. */
+function medalFor(bankCents, accuracyPct) {
+  if (bankCents >= 3_000_000 || (accuracyPct >= 90 && bankCents >= 1_500_000))
+    return { tier: 'gold',   medal: '🥇', emoji: '🏆', label: 'Holy Haul',        headline: 'Blessed — a Holy Haul!' };
+  if (bankCents >= 2_100_000)
+    return { tier: 'silver', medal: '🥈', emoji: '😇', label: 'Faithful Finish',  headline: 'Well played, faithful one.' };
+  if (bankCents >= 1_200_000)
+    return { tier: 'bronze', medal: '🥉', emoji: '🙂', label: 'Growing in Grace', headline: 'A good and faithful effort.' };
+  return   { tier: 'wood',   medal: '🪵', emoji: '🌱', label: 'Humble Pilgrim',   headline: 'Every saint started somewhere — try again!' };
+}
+
 function showResults() {
   show('results');
   const bank = game.bank;
@@ -2576,15 +2698,21 @@ function showResults() {
   el.finalBank.classList.toggle('neg', bank < 0);
   el.resHero.classList.toggle('neg', bank < 0);
 
-  // dynamic headline + emoji (whole game)
-  let emoji, headline;
-  if (bank >= 800_000)      { emoji = '🏆'; headline = 'Blessed! A holy haul.'; }
-  else if (bank >= 300_000) { emoji = '😇'; headline = 'Well played, disciple.'; }
-  else if (bank >= 0)       { emoji = '🙂'; headline = 'You kept the faith.'; }
-  else                      { emoji = '😬'; headline = 'Rough pilgrimage — try again?'; }
-  el.resEmoji.textContent = emoji;
-  el.resHeadline.textContent = headline;
+  // medal tier (bank-driven, with a gold override for sharp accuracy + big points)
+  const m = medalFor(bank, accuracy);
+  el.resEmoji.textContent = m.emoji;
+  el.resMedal.textContent = `${m.medal} ${m.tier.toUpperCase()} · ${m.label}`;
+  el.resMedal.className = 'res-medal ' + m.tier;
+  el.resHeadline.textContent = m.headline;
   el.resHeadline.style.color = bank < 0 ? 'var(--red)' : 'var(--gold)';
+
+  // achievements earned at the breaks
+  const ach = game.achievements || [];
+  el.resAchTitle.classList.toggle('hidden', ach.length === 0);
+  el.resAch.classList.toggle('hidden', ach.length === 0);
+  el.resAch.innerHTML = ach.map(a =>
+    `<div class="ach-chip"><span class="ach-ic">${a.icon}</span><span><div class="ach-name">${esc(a.name)}</div><div class="ach-desc">${esc(a.desc)}</div></span></div>`
+  ).join('');
 
   el.resStats.innerHTML =
     `<div class="stat"><span class="v ${correct>0?'pos':''}">${correct}/${totalQ}</span><span class="k">Correct</span></div>` +
@@ -2657,11 +2785,17 @@ el.mannaSkip.onclick = () => skipBreak('manna');
 el.match3Skip.onclick = () => skipBreak('match3');
 el.marySkip.onclick = () => skipBreak('mary');
 document.querySelectorAll('.nr-choice').forEach(b => b.addEventListener('click', () => pickDifficulty(b)));
+el.sourcePop.addEventListener('pointerdown', closeSourcePop);   // tap anywhere dismisses
 document.addEventListener('keydown', (e) => {
   const isEnter = e.key === 'Enter' || e.key === ' ';
   // Enter/Space is handled entirely here — prevent the native activation of a still-focused
   // button, which would double-fire the action (two prerolls, orphaned timers).
   if (isEnter) e.preventDefault();
+  // source popover swallows all keys — Enter/Escape close it, nothing behind it can fire
+  if (!el.sourcePop.classList.contains('hidden')) {
+    if (isEnter || e.key === 'Escape') closeSourcePop();
+    return;
+  }
   if (!screens.play.classList.contains('hidden') && !answered) {
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= 4) { const b = el.optionsGrid.querySelectorAll('.opt')[n-1]; if (b) onAnswer(n-1); }
@@ -2742,6 +2876,12 @@ function dismissSplash() {
   A('Mary reward: all tiers → $500 jackpot', maryReward(60, 3).cents >= 50_000 && maryReward(60, 3).jackpot);
   A('Mary reward: partial is in $100–$450 band', maryReward(12, 1).cents >= 10_000 && maryReward(12, 1).cents <= 45_000);
   A('Mary reuses the shared 6×7 board helpers', findMatches(makeBoard()).size === 0 && MARY_SYMBOLS.length === 6);
+  // Final-score medals
+  A('medal: $32,000 → gold Holy Haul', medalFor(3_200_000, 60).tier === 'gold');
+  A('medal: ~$10,700 (a third) → wood', medalFor(1_070_000, 60).tier === 'wood');
+  A('medal: 90% accuracy + big points → gold', medalFor(1_600_000, 92).tier === 'gold');
+  A('medal: mid bank → silver', medalFor(2_200_000, 70).tier === 'silver');
+  A('medal: modest bank → bronze', medalFor(1_300_000, 60).tier === 'bronze');
   const pass = R.filter(x => x[1]).length;
   console.log('%c[CatholicsApp.Engine self-tests] ' + pass + '/' + R.length + ' passed', pass === R.length ? 'color:#30D158;font-weight:bold' : 'color:#FF453A;font-weight:bold');
   R.forEach(x => console.log((x[1] ? '  ✓ ' : '  ✗ ') + x[0]));
